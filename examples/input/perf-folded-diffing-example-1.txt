@@ -1,0 +1,10 @@
+example;M;A 50
+example;M;A;B 25
+example;M;C 5
+example;M;C;D 50
+example;M;C;E 20
+example;M;C;D;G 5
+example;M;C;D;F 5
+example;M;C;D;G;E 50
+example;M;C;D;G;F 25
+example;M;C;D;G;N 50

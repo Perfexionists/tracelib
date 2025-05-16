@@ -1,0 +1,33 @@
+{
+  "filePaths": ["", "/home/ptr/devel/pintool-experiments/experiment-programs/simple/args/args.c"],
+  "functions": {
+    "0": {
+      "name": "fooINT",
+      "location": {"fileId": 1, "lines": [11, 14]}
+    },
+    "1": {
+      "name": "fooCHAR",
+      "location": {"fileId": 1, "lines": [16, 19]}
+    },
+    "2": {
+      "name": "barSTR",
+      "location": {"fileId": 1, "lines": [21, 24]}
+    },
+    "3": {
+      "name": "barINT",
+      "location": {"fileId": 1, "lines": [26, 29]}
+    },
+    "4": {
+      "name": "baz",
+      "location": {"fileId": 1, "lines": [31, 34]}
+    },
+    "5": {
+      "name": "qux",
+      "location": {"fileId": 1, "lines": [36, 39]}
+    },
+    "6": {
+      "name": "main",
+      "location": {"fileId": 1, "lines": [41, 56]}
+    }
+  }
+}
