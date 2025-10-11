@@ -44,6 +44,15 @@ void PerfFoldedParser::parseMetadata() {
 }
 
 PerfFoldedEvent *PerfFoldedParser::getNextEvent() {
+    // Check if we reached the end position
+    if (this->endPos != std::ifstream::pos_type(-1)) {
+        auto currentPos = traceFile.tellg();
+        if (currentPos != std::ifstream::pos_type(-1) && endPos <= currentPos) {
+            this->currentLine = "";
+            return nullptr;
+        }
+    }
+
     // Retrieve a line from the file
     std::string currentLine;
     if (!std::getline(this->traceFile, currentLine)) {
