@@ -34,7 +34,9 @@ std::string PerfFoldedEvent::toString() {
 }
 
 // Parser
-PerfFoldedParser::PerfFoldedParser(const std::string &traceFilePath, const std::string& metadataFilePath) : Parser(traceFilePath, metadataFilePath){
+PerfFoldedParser::PerfFoldedParser(const std::string &traceFilePath, const std::string& metadataFilePath,
+                                   std::ifstream::pos_type startPos, std::ifstream::pos_type endPos)
+                                   : Parser(traceFilePath, metadataFilePath, startPos, endPos) {
 }
 
 void PerfFoldedParser::parseMetadata() {
