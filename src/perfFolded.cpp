@@ -121,3 +121,7 @@ long long int PerfFoldedNodeData::getInvocationFrequency() const {
     return this->samplesCnt;
 }
 
+void PerfFoldedNodeData::merge(const PerfFoldedNodeData &other) {
+    this->samplesCnt += other.samplesCnt;
+}
+

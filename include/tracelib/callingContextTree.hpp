@@ -102,6 +102,11 @@ public:
     CCTNode<NodeData>* getChild(const std::string& childName);
 
     /**
+     * @brief Merge other CCTNode into the current one.
+     */
+    void merge(const CCTNode<NodeData>& other);
+
+    /**
      * @brief Comparison of nodes that is checking only the function name and is allows missmatched NodeData types.
      * @tparam U the type of the other node
      * @param other the other node
@@ -211,6 +216,28 @@ CCTNode<NodeData> * CCTNode<NodeData>::getChild(const std::string &childName) {
     return it != this->children.end() ? it->second : nullptr;
 }
 
+template<class NodeData>
+void CCTNode<NodeData>::merge(const CCTNode<NodeData> &other)
+{
+    if (this->data != nullptr && other.data != nullptr) {
+        this->data.merge(other.data);
+    }
+
+    // TODO Can do this with better complexity?
+    for (const auto &[name, node] : other.children) {
+        if (node == nullptr) {
+            continue;
+        }
+
+        auto child = this->children.find(name);
+        if (child == nullptr) {
+            addChild(node);
+        } else {
+            child->merge(node);
+        }
+    }
+}
+
 
 /**
  * @brief A class representing a Calling Context Tree (CCT).
@@ -302,6 +329,11 @@ public:
      */
     void prune(long long int threshold);
     std::pair<int, std::vector<Operation<CCTNode<NodeData>>>> treeEditDistance(CCTree<NodeData>& other);
+
+    /**
+     * @brief Merge other CCTree into the current one.
+     */
+    void merge(const CCTree<NodeData> &other);
 
     /**
      * @brief Form string representation of the tree.
@@ -926,6 +958,22 @@ std::pair<int, std::vector<Operation<CCTNode<NodeData>>>> CCTree<NodeData>::tree
     }
 
     return {treeDistance.back().back(), operations.back().back()};
+}
+
+template<class NodeData>
+void CCTree<NodeData>::merge(const CCTree<NodeData> &other) {
+    if (this->processName != other.processName) {
+        std::cerr << "[W]: Merging CCTrees with different processName" << std::endl;
+    }
+    if (this->pid != other.pid) {
+        std::cerr << "[W]: Merging CCTrees with different pid" << std::endl;
+    }
+    if (this->tid != other.tid) {
+        std::cerr << "[W]: Merging CCTrees with different tid" << std::endl;
+    }
+
+    // TODO Ignoring currentNode
+    this->rootNode->merge(*other.getRootNode());
 }
 
 template<class NodeData>

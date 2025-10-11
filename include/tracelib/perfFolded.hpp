@@ -113,6 +113,8 @@ public:
      */
     long long int getInvocationFrequency() const override;
 
+    void merge(const PerfFoldedNodeData &other);
+
 private:
     friend class boost::serialization::access;
 
