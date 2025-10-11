@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.22)
 project(tracelib VERSION 1.0 LANGUAGES CXX DESCRIPTION "Library for representation and manipulation of performance traces")
 include(GNUInstallDirs)
 
@@ -15,8 +15,12 @@ set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Find required packages
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(zstd REQUIRED libzstd)
+include_directories(${ZSTD_INCLUDE_DIR})
+
 find_package(Boost REQUIRED NO_MODULE COMPONENTS serialization)
-find_package(zstd REQUIRED)
+#find_package(zstd REQUIRED)
 find_package(nlohmann_json REQUIRED)
 
 
@@ -43,6 +47,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         Boost::serialization
         nlohmann_json::nlohmann_json
         zstd
+        ${ZSTD_LIBRARY}
 )
 
 install(TARGETS ${PROJECT_NAME} # EXPORT tracelibConfig

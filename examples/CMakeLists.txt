@@ -3,8 +3,12 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find required packages
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(zstd REQUIRED libzstd)
+include_directories(${ZSTD_INCLUDE_DIR})
+
 find_package(Boost REQUIRED NO_MODULE COMPONENTS serialization)
-find_package(zstd REQUIRED)
+#find_package(zstd REQUIRED)
 find_package(nlohmann_json REQUIRED)
 
 
@@ -18,6 +22,7 @@ target_link_libraries(example PUBLIC tracelib PRIVATE
         Boost::serialization
         nlohmann_json::nlohmann_json
         zstd
+        ${ZSTD_LIBRARY}
 )
 
 # Add python example to the build

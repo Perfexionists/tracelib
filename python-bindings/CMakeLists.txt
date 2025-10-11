@@ -2,8 +2,12 @@ cmake_minimum_required(VERSION 3.24)
 
 find_package(Python COMPONENTS Interpreter Development REQUIRED)
 message("-- Python_SITEARCH: ${Python_SITEARCH}")
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(zstd REQUIRED libzstd)
+include_directories(${ZSTD_INCLUDE_DIR})
+
 find_package(Boost REQUIRED NO_MODULE COMPONENTS serialization)
-find_package(zstd REQUIRED)
+#find_package(zstd REQUIRED)
 find_package(nlohmann_json REQUIRED)
 
 include(FetchContent)
@@ -28,7 +32,7 @@ target_sources(tracelibpy PRIVATE
 )
 target_compile_options(tracelibpy PRIVATE -g -Wno-unused-parameter -flto=auto)
 target_link_libraries(tracelibpy
-    PRIVATE tracelib Boost::serialization zstd nlohmann_json
+    PRIVATE tracelib Boost::serialization zstd nlohmann_json ${ZSTD_LIBRARY}
 )
 
 # This wont work with the cmake's variable for custom installation prefix since it is an absolute path
