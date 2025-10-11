@@ -60,7 +60,7 @@ PerfFoldedEvent *PerfFoldedParser::getNextEvent() {
         std::cerr << "[E]: Unexpected format of trace file!" << std::endl;
         exit(1);
     }
-    std::string stackSampleString = currentLine.substr(0, pos);
+    std::string stackSampleString = currentLine.substr(0, pos); // TODO stringviews here
     const std::string sampleCntString = currentLine.substr(pos+1);
     const long long int sampleCnt = std::stoll(sampleCntString);
 

@@ -92,7 +92,7 @@ PerunPinEvent* PerunPinParser::getNextEvent() {
 
 
     Event::Type eventType;
-    std::string functionName;
+    std::string functionName; // TODO stringview?
     std::string sourceCodeFilePath;
     std::vector<int> sourceCodeLines;
     auto* data = new PerunPinEventData(timestamp);
