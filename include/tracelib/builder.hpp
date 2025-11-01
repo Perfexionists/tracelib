@@ -1169,4 +1169,67 @@ void Builder<Graph>::serializeCCTreeToPerfFoldedFormat(std::ostream &outputStrea
 }
 
 
+// TODO Move into more appropriate location / class
+
+#include <thread>
+
+// TODO implemented?
+static std::ifstream::pos_type gFileSize(const std::string &traceFilePath) {
+    std::ifstream traceFile(traceFilePath, std::ifstream::ate);
+    if (!traceFile.is_open()) {
+        std::cerr << "[E]: Couldn't open file " << traceFilePath << "!" << std::endl;
+        exit(1);
+    }
+    auto fileSize = traceFile.tellg();
+    if (fileSize == std::ifstream::pos_type(-1)) {
+        std::cerr << "[E]: Couldn't tell size of file " << traceFilePath << "!" << std::endl;
+        exit(1);
+    }
+    return fileSize;
+}
+
+static void parBuild(const std::string &traceFilePath,
+                     std::ifstream::pos_type startPos, std::ifstream::pos_type endPos,
+                     CCTree<PerfFoldedNodeData> &out) {
+    auto parser = PerfFoldedParser(traceFilePath, "", startPos, endPos);
+    auto builder = Builder<CCTree<PerfFoldedNodeData>>();
+
+    builder.build(&out, &parser);
+}
+
+CCTree<PerfFoldedNodeData> buildParCCT(const std::string &traceFilePath, int threadCount) {
+    auto fileSize = gFileSize(traceFilePath);
+
+    // TODO Dont use dynamic array
+    CCTree<PerfFoldedNodeData> trees[threadCount];
+    std::thread threads[threadCount];
+    for (int i = 0; i < threadCount; ++i) {
+        threads[i] = std::thread(parBuild, traceFilePath,
+                            fileSize * (i / threadCount), fileSize * (i / (threadCount + 1)),
+                            trees[i]);
+    }
+
+    // TODO Dont busywait
+    bool allJoinable;
+    do {
+        allJoinable = true;
+        for (int i = 0; i < threadCount; ++i) {
+            if (!threads[i].joinable()) {
+                allJoinable = false;
+                break;
+            }
+        }
+    } while (!allJoinable);
+
+    for (int i = 0; i < threadCount; ++i) {
+        threads[i].join();
+    }
+
+    for (int i = 1; i < threadCount; ++i) {
+        trees[0].merge(trees[i]);
+    }
+
+    return trees[0];
+}
+
 #endif //BUILDER_HPP

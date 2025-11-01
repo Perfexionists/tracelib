@@ -219,8 +219,9 @@ CCTNode<NodeData> * CCTNode<NodeData>::getChild(const std::string &childName) {
 template<class NodeData>
 void CCTNode<NodeData>::merge(const CCTNode<NodeData> &other)
 {
+    // TODO if this nullptr. other places???
     if (this->data != nullptr && other.data != nullptr) {
-        this->data.merge(other.data);
+        this->data->merge(*other.data);
     }
 
     // TODO Can do this with better complexity?
@@ -229,11 +230,10 @@ void CCTNode<NodeData>::merge(const CCTNode<NodeData> &other)
             continue;
         }
 
-        auto child = this->children.find(name);
-        if (child == nullptr) {
-            addChild(node);
+        if (auto child = this->children.find(name); child != this->children.end()) {
+            child->second->merge(*node);
         } else {
-            child->merge(node);
+            addChild(node);
         }
     }
 }
@@ -300,6 +300,7 @@ public:
      * @brief Retrieves the root node of the tree.
      * @return root node
      */
+    const CCTNode<NodeData>* getRootNode() const;
     CCTNode<NodeData>* getRootNode();
 
     /**
@@ -799,6 +800,11 @@ CCTNode<NodeData> * CCTree<NodeData>::getRootNode() {
 }
 
 template<class NodeData>
+const CCTNode<NodeData> * CCTree<NodeData>::getRootNode() const {
+    return this->root;
+}
+
+template<class NodeData>
 CCTNode<NodeData>* CCTree<NodeData>::getParentOfCurrentNode() {
     return this->currentNode->parent;
 }
@@ -973,7 +979,7 @@ void CCTree<NodeData>::merge(const CCTree<NodeData> &other) {
     }
 
     // TODO Ignoring currentNode
-    this->rootNode->merge(*other.getRootNode());
+    getRootNode()->merge(*other.getRootNode());
 }
 
 template<class NodeData>
