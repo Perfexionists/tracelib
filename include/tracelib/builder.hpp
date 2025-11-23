@@ -1190,11 +1190,11 @@ static std::ifstream::pos_type gFileSize(const std::string &traceFilePath) {
 
 static void parBuild(const std::string &traceFilePath,
                      std::ifstream::pos_type startPos, std::ifstream::pos_type endPos,
-                     CCTree<PerfFoldedNodeData> &out) {
+                     CCTree<PerfFoldedNodeData> *out) {
     auto parser = PerfFoldedParser(traceFilePath, "", startPos, endPos);
     auto builder = Builder<CCTree<PerfFoldedNodeData>>();
 
-    builder.build(&out, &parser);
+    builder.build(out, &parser);
 }
 
 CCTree<PerfFoldedNodeData> buildParCCT(const std::string &traceFilePath, int threadCount) {
@@ -1206,7 +1206,7 @@ CCTree<PerfFoldedNodeData> buildParCCT(const std::string &traceFilePath, int thr
     for (int i = 0; i < threadCount; ++i) {
         threads[i] = std::thread(parBuild, traceFilePath,
                             fileSize * (i / threadCount), fileSize * (i / (threadCount + 1)),
-                            trees[i]);
+                            &trees[i]);
     }
 
     // TODO Dont busywait
