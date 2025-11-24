@@ -1205,7 +1205,7 @@ CCTree<PerfFoldedNodeData> buildParCCT(const std::string &traceFilePath, int thr
     std::thread threads[threadCount];
     for (int i = 0; i < threadCount; ++i) {
         threads[i] = std::thread(parBuild, traceFilePath,
-                            fileSize * (i / threadCount), fileSize * (i / (threadCount + 1)),
+                            (fileSize * i) / threadCount, (fileSize * (i + 1)) / threadCount,
                             &trees[i]);
     }
 
@@ -1225,11 +1225,12 @@ CCTree<PerfFoldedNodeData> buildParCCT(const std::string &traceFilePath, int thr
         threads[i].join();
     }
 
-    for (int i = 1; i < threadCount; ++i) {
-        trees[0].merge(trees[i]);
+    CCTree<PerfFoldedNodeData> tree;
+    for (int i = 0; i < threadCount; ++i) {
+        tree.merge(trees[i]);
     }
 
-    return trees[0];
+    return tree;
 }
 
 #endif //BUILDER_HPP

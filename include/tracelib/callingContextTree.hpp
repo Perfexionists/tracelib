@@ -233,7 +233,7 @@ void CCTNode<NodeData>::merge(const CCTNode<NodeData> &other)
         if (auto child = this->children.find(name); child != this->children.end()) {
             child->second->merge(*node);
         } else {
-            addChild(node);
+            addChild(node); // TODO TODO TODO can do this, then merge. remove data. BUT POINTER. WHERE IS DATA STORED?????????????
         }
     }
 }
@@ -969,10 +969,10 @@ std::pair<int, std::vector<Operation<CCTNode<NodeData>>>> CCTree<NodeData>::tree
 template<class NodeData>
 void CCTree<NodeData>::merge(const CCTree<NodeData> &other) {
     if (this->processName != other.processName) {
-        std::cerr << "[W]: Merging CCTrees with different processName" << std::endl;
+        std::cerr << "[W]: Merging CCTrees with different processName: " << this->processName << " vs " << other.processName << std::endl;
     }
     if (this->pid != other.pid) {
-        std::cerr << "[W]: Merging CCTrees with different pid" << std::endl;
+        std::cerr << "[W]: Merging CCTrees with different pid: " << this->pid << " vs " << other.pid << std::endl;
     }
     if (this->tid != other.tid) {
         std::cerr << "[W]: Merging CCTrees with different tid" << std::endl;
