@@ -1068,7 +1068,7 @@ private:
     /**
      * @brief Map of the trees in the forest based on the process id (pid) and thread id (tid) of the tree.
      */
-    std::unordered_map<std::pair<int, int>, CCTree<NodeData>*, PairHash> forestMap = {};
+    std::unordered_map<std::pair<int, int>, std::unique_ptr<CCTree<NodeData>>, PairHash> forestMap = {};
 public:
     using valueType = NodeData;
 
@@ -1092,7 +1092,7 @@ public:
      * @brief Adds the specified tree to the forest. The tree has to have pid and tid set
      * @param tree tree to be added to the forest (with pid and tid set)
      */
-    void addTree(CCTree<NodeData>* tree);
+    void addTree(std::unique_ptr<CCTree<NodeData>> &&tree);
     /**
      * @brief Creates a new tree and adds it to the forest.
      * @param pid process id of the new tree
@@ -1152,7 +1152,7 @@ public:
         /**
          * @brief The forest map that is being iterated over.
          */
-        const std::unordered_map<std::pair<int, int>, CCTree<NodeData>*, PairHash>* forestMap = nullptr;
+        const std::unordered_map<std::pair<int, int>, std::unique_ptr<CCTree<NodeData>>, PairHash>* forestMap = nullptr;
         /**
          * @brief the index of the current key in the keys vector. Specifies the current tree in the forest.
          */
@@ -1170,7 +1170,7 @@ public:
         using reference = std::pair<std::pair<int, int>, CCTree<NodeData>*>&;
 
 
-        explicit TreeIterator(const std::unordered_map<std::pair<int, int>, CCTree<NodeData>*, PairHash>* map, bool isEnd = false) : forestMap(map) {
+        explicit TreeIterator(const std::unordered_map<std::pair<int, int>, std::unique_ptr<CCTree<NodeData>>, PairHash>* map, bool isEnd = false) : forestMap(map) {
             size_t mapSize = map->size();
             if (isEnd) {
                 this->currentKeyIndex = map != nullptr ? mapSize : 0;
@@ -1186,7 +1186,7 @@ public:
 
             this->currentKeyIndex = 0;
             auto& currentKey = this->keys[this->currentKeyIndex];
-            this->currentPair = std::make_pair(currentKey, this->forestMap->at(currentKey));
+            this->currentPair = std::make_pair(currentKey, this->forestMap->at(currentKey).get());
         }
 
         reference operator*() { return this->currentPair; }
@@ -1199,7 +1199,7 @@ public:
                 return *this;
             }
             auto& currentKey = this->keys[this->currentKeyIndex];
-            this->currentPair = std::make_pair(currentKey, this->forestMap->at(currentKey));
+            this->currentPair = std::make_pair(currentKey, this->forestMap->at(currentKey).get());
             return *this;
         }
         TreeIterator operator++(int) { // Postfix increment
@@ -1289,46 +1289,41 @@ private:
 
 template<class NodeData>
 CCForest<NodeData>::~CCForest() {
-    for (auto&[pid_tid, tree] : this->forestMap) {
-        delete tree;
-        tree = nullptr;
-    }
 }
 
 template<class NodeData>
 CCTree<NodeData>* CCForest<NodeData>::getTree(int pid, int tid) {
     const auto key = std::make_pair(pid, tid);
     if (const auto it = this->forestMap.find(key); it != this->forestMap.end()) {
-        return it->second;
+        return it->second.get();
     }
     return nullptr;
 }
 
 template<class NodeData>
-void CCForest<NodeData>::addTree(CCTree<NodeData>* tree) {
+void CCForest<NodeData>::addTree(std::unique_ptr<CCTree<NodeData>> &&tree) {
     const auto key = std::make_pair(tree->pid, tree->tid);
     if (const auto it = this->forestMap.find(key); it != this->forestMap.end()) {
         std::cerr << "[W]: A tree with specified pid and tid already exists! "
                   << "Will not add a tree with the same process identification to the forest." << std::endl;
         return;
     }
-    this->forestMap.emplace(key, tree);
+    this->forestMap.emplace(key, std::forward<std::unique_ptr<CCTree<NodeData>>>(tree));
 }
 
 template<class NodeData>
 CCTree<NodeData>* CCForest<NodeData>::addNewTree(int pid, int tid, const std::string& processName) {
     // Note: expects the tree to be new (pid and tid not in the forestMap yet)
-    auto* tree = new CCTree<NodeData>();
+    auto* tree = this->forestMap.emplace(std::make_pair(pid, tid), std::make_unique<CCTree<NodeData>>()).first->second.get();
     tree->processName = processName;
     tree->pid = pid;
     tree->tid = tid;
-    this->forestMap.emplace(std::make_pair(pid, tid), tree);
     return tree;
 }
 
 template<class NodeData>
 void CCForest<NodeData>::prune(const long long int threshold) {
-    for (auto [treeidm, treePtr] : this->forestMap) {
+    for (auto& [treeidm, treePtr] : this->forestMap) {
        treePtr->prune(threshold);
     }
 }
