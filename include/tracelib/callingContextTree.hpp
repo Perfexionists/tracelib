@@ -15,6 +15,7 @@
 #include <boost/serialization/nvp.hpp>
 #include <boost/serialization/split_member.hpp>
 #include <boost/serialization/export.hpp>
+#include <boost/serialization/unique_ptr.hpp>
 
 #include "utils.hpp"
 
@@ -50,7 +51,7 @@ public:
     /**
      * @brief The children of this node in a map where the key is nodes function name.
      */
-    std::map<std::string, CCTNode*> children = {};
+    std::map<std::string, std::unique_ptr<CCTNode>> children = {};
 
     /**
      * @brief Creates an empty node.
@@ -80,7 +81,7 @@ public:
      * @brief Adds the specified child node to the children of this node.
      * @param child a new child node
      */
-    void addChild(CCTNode<NodeData>* child);
+    void addChild(std::unique_ptr<CCTNode<NodeData>> &&child);
 
     /**
      * @brief Removes the specified child node from the children of this node. The node is deallocated as well.
@@ -169,7 +170,6 @@ template<class NodeData>
 CCTNode<NodeData>::~CCTNode() {
     for (auto& [name, node] : this->children) {
         node->parent = nullptr;
-        delete node;
     }
     this->children.clear();
 }
@@ -182,9 +182,9 @@ std::string CCTNode<NodeData>::toString() const {
 }
 
 template<class NodeData>
-void CCTNode<NodeData>::addChild(CCTNode<NodeData> *child) {
+void CCTNode<NodeData>::addChild(std::unique_ptr<CCTNode<NodeData>> &&child) {
     if (child != nullptr) {
-        this->children.emplace(child->functionName, child);
+        this->children.emplace(child->functionName, std::forward<std::unique_ptr<CCTNode<NodeData>>>(child));
     }
 }
 
@@ -200,7 +200,6 @@ template<class NodeData>
 void CCTNode<NodeData>::removeChild(const std::string &childName) {
     auto it = this->children.find(childName);
     if (it != this->children.end()) {
-        delete it->second;
         this->children.erase(it);
     }
 }
@@ -208,7 +207,7 @@ void CCTNode<NodeData>::removeChild(const std::string &childName) {
 template<class NodeData>
 CCTNode<NodeData> * CCTNode<NodeData>::getChild(const std::string &childName) {
     auto it = this->children.find(childName);
-    return it != this->children.end() ? it->second : nullptr;
+    return it != this->children.end() ? it->second.get() : nullptr;
 }
 
 
@@ -413,7 +412,7 @@ public:
             CCTNode<NodeData>* node = stack.top();
             stack.pop();
             for (auto it = node->children.rbegin(); it != node->children.rend(); ++it) {
-                stack.push(it->second);
+                stack.push(it->second.get());
             }
             // Update current node
             this->currentNode = stack.empty() ? nullptr : stack.top();
@@ -454,7 +453,7 @@ public:
                 if (!visited) {
                     visited = true;
                     for (auto it = node->children.rbegin(); it != node->children.rend(); ++it) {
-                        auto* child = it->second;
+                        auto* child = it->second.get();
                         if (child != nullptr) {
                             this->stack.push({child, false});
                         }
@@ -583,7 +582,7 @@ public:
             this->queue.pop_front();
             // Add children to the queue
             for (auto& [name, child] : node->children) {
-                this->queue.push_back(child);
+                this->queue.push_back(child.get());
             }
             // Update the current node
             this->currentNode = this->queue.empty() ? nullptr : this->queue.front();
@@ -681,6 +680,7 @@ public:
     PathToRootIterator pathToRootEnd() { return PathToRootIterator(nullptr); }
 
 protected:
+    void pruneSubtree_rec(CCTNode<NodeData> *root, const int long long threshold);
     /**
      * @brief prune a subtree from its leaves according to the specified threashold.
      * @param root the node representing the root of the subtree to prune
@@ -773,23 +773,19 @@ CCTNode<NodeData>* CCTree<NodeData>::getParentOfCurrentNode() {
 
 template<class NodeData>
 CCTNode<NodeData>* CCTree<NodeData>::getChildOfCurrentNode(std::string &name) {
-    for (auto& [nodeName, nodePointer] : this->currentNode->children) {
-        if (name == nodeName) {
-            return nodePointer;
-        }
-    }
-    return nullptr;
+    auto it = this->currentNode->children.find(name);
+    return it != this->currentNode->children.end() ? it->second.get() : nullptr;
 }
 
 template<class NodeData>
 CCTNode<NodeData>* CCTree<NodeData>::addNewChildToCurrentNode(std::string &name) {
     // Note: expactes that the node name does not exist in children yet
-    if (this->currentNode != nullptr) {
-        auto *newChildNode = new CCTNode<NodeData>(name, this->currentNode);
-        this->currentNode->children.emplace(newChildNode->functionName, newChildNode);
-        return newChildNode;
+    if (this->currentNode == nullptr) {
+        return nullptr;
     }
-    return nullptr;
+    auto newChildNode = std::make_unique<CCTNode<NodeData>>(name, this->currentNode);
+    const auto &functionName = newChildNode->functionName;
+    return this->currentNode->children.emplace(functionName, std::move(newChildNode)).first->second.get();
 }
 
 // template<class NodeData>
@@ -803,7 +799,7 @@ void CCTree<NodeData>::prune(const long long int threshold) {
     // Note: invalidate current node. It is assumed that the building of the tree is finished
     // The current node should not be removed by prunning since it is at the auxiliary root at the end.
     this->currentNode = nullptr;
-    this->pruneSubtree(this->root, threshold);
+    this->pruneSubtree(this->root.get(), threshold);
 }
 
 template<class NodeData>
@@ -929,16 +925,30 @@ std::pair<int, std::vector<Operation<CCTNode<NodeData>>>> CCTree<NodeData>::tree
 }
 
 template<class NodeData>
-void CCTree<NodeData>::pruneSubtree(CCTNode<NodeData>* root, const long long int threshold) {
-    // Iterate over leaf nodes
-    for (auto it= this->postOrderBegin(root); it != this->postOrderEnd(); ++it) {
-        auto* node = *it;
-        if (node->children.empty()) { // is leaf node
-            if (node->data->getInvocationFrequency() < threshold) {
-                auto* parent = node->parent;
-                parent->removeChild(node->functionName); // Deletes the child pointer as well
-            }
+void CCTree<NodeData>::pruneSubtree_rec(CCTNode<NodeData> *root, const long long int threshold) {
+    std::erase_if(root->children, [this, threshold](auto &item) {
+        auto &[_, child] = item;
+        if (child == nullptr) {
+            return false;
         }
+        this->pruneSubtree_rec(child, threshold);
+        return child->children.empty() && child->data->getInvocationFrequency() < threshold;
+    });
+}
+
+/*
+ * Prune the CHILDREN of root
+ */
+template<class NodeData>
+void CCTree<NodeData>::pruneSubtree(CCTNode<NodeData> *root, const long long int threshold) {
+    if (root == nullptr) {
+        return;
+    }
+    this->pruneSubtree_rec(root, threshold);
+
+    auto *parent = root->parent;
+    if (parent != nullptr) {
+        parent->removeChild(root->functionName);
     }
 }
 
@@ -1009,7 +1019,7 @@ std::string CCTree<NodeData>::toString() const {
         stack.emplace(nullptr);
         offset += " | ";
         for (auto it = currentNode->children.rbegin(); it != currentNode->children.rend(); ++it) {
-            stack.emplace(it->second);
+            stack.emplace(it->second.get());
         }
     }
     return sstream.str();
