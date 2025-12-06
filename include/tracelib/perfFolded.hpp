@@ -3,6 +3,7 @@
 
 #include <boost/serialization/nvp.hpp>
 
+#include <memory>
 #include "nodeData.hpp"
 #include "parser.hpp"
 #include "event.hpp"
@@ -26,12 +27,12 @@ public:
  */
 class PerfFoldedEvent final : public Event {
 public:
-    PerfFoldedEventData* data;
+    std::unique_ptr<PerfFoldedEventData> data;
 
     PerfFoldedEvent(Type type, const std::string& name,
                     const std::string& processName = "",
                     int tid = -1, int pid = -1, int ppid = -1,
-                    PerfFoldedEventData* data = nullptr);
+                    std::unique_ptr<PerfFoldedEventData> &&data = nullptr);
 
     ~PerfFoldedEvent() override;
 

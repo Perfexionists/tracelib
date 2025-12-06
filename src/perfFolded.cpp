@@ -13,17 +13,16 @@ PerfFoldedEventData::PerfFoldedEventData(const long long int samples) : samples(
 PerfFoldedEvent::PerfFoldedEvent(const Type type, const std::string &name,
                                  const std::string &processName,
                                  const int tid, const int pid, const int ppid,
-                                 PerfFoldedEventData *data) :
-Event(type, name, processName, tid, pid, ppid), data(data){
+                                 std::unique_ptr<PerfFoldedEventData> &&data) :
+Event(type, name, processName, tid, pid, ppid), data(std::move(data)){
 
 }
 
 PerfFoldedEvent::~PerfFoldedEvent() {
-    delete this->data;
 }
 
 PerfFoldedEventData *PerfFoldedEvent::getData() {
-    return this->data;
+    return this->data.get();
 }
 
 std::string PerfFoldedEvent::toString() {
@@ -90,7 +89,7 @@ PerfFoldedEvent *PerfFoldedParser::getNextEvent() {
     event->stackSample = stackSample;
     event->processName = processName;
     event->pid = processId;
-    event->data = new PerfFoldedEventData(sampleCnt);
+    event->data = std::make_unique<PerfFoldedEventData>(sampleCnt);
     return event;
 }
 
