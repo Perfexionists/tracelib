@@ -5,6 +5,7 @@
 #include <iostream>
 #include <sstream>
 #include <stack>
+#include <memory>
 #include <iterator>
 #include <cstddef>
 #include <boost/serialization/access.hpp>
@@ -39,7 +40,7 @@ public:
     /**
      * @brief The node data should be an instance of class derived from NodeData class.
      */
-    NodeData* data = nullptr;
+    std::unique_ptr<NodeData> data = nullptr;
 
     /**
      * @brief The parent node of this node.
@@ -161,12 +162,11 @@ private:
 
 template<class NodeData>
 CCTNode<NodeData>::CCTNode(const std::string& name, CCTNode *parent) : functionName(name), parent(parent) {
-    this->data = new NodeData();
+    this->data = std::make_unique<NodeData>();
 }
 
 template<class NodeData>
 CCTNode<NodeData>::~CCTNode() {
-    delete data;
     for (auto& [name, node] : this->children) {
         node->parent = nullptr;
         delete node;
