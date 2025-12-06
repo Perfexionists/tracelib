@@ -223,7 +223,7 @@ private:
      * @brief The root node of the tree.
      * By default it is always an auxiliary root node with function name ".ROOT".
      */
-    CCTNode<NodeData>* root;
+    std::unique_ptr<CCTNode<NodeData>> root = nullptr;
     /**
      * @brief The node which represents the currently "executed" function. The function call was encountered
      * and every event happening until a new function call or function returns is associated with this node.
@@ -603,7 +603,7 @@ public:
      * @brief The begining iterator for the tree starting in the root and moving forward in pre-order fashion.
      * @return The iterator pointing to the root of the tree.
      */
-    defaultIterator begin() { return defaultIterator(this->root); }
+    defaultIterator begin() { return defaultIterator(this->root.get()); }
     /**
      * @brief The begining iterator for the tree starting in the specified node and moving forward in pre-order fashion.
      * @param root the root of the (sub)tree to traverse
@@ -620,7 +620,7 @@ public:
      * @brief The begining iterator for the tree starting in the root and moving forward in pre-order fashion.
      * @return The pre-order iterator pointing to the root of the tree.
      */
-    PreOrderIterator preOrderBegin() { return PreOrderIterator(root); }
+    PreOrderIterator preOrderBegin() { return PreOrderIterator(this->root.get()); }
     /**
     * @brief The begining iterator for the tree starting in the specified node and moving forward in pre-order fashion.
     * @param root the root of the (sub)tree to traverse
@@ -637,7 +637,7 @@ public:
      * @brief The begining iterator for the tree starting in the root and moving forward in post-order fashion.
      * @return The pre-order iterator pointing to the root of the tree.
      */
-    PostOrderIterator postOrderBegin() { return PostOrderIterator(root); }
+    PostOrderIterator postOrderBegin() { return PostOrderIterator(this->root.get()); }
     /**
      * @brief The begining iterator for the tree starting in the specified node and moving forward in post-order fashion.
      * @param root the root of the (sub)tree to traverse
@@ -654,7 +654,7 @@ public:
      * @brief The begining iterator for the tree starting in the root and moving forward in level-order fashion.
      * @return The level-order iterator pointing to the root of the tree.
      */
-    LevelOrderIterator levelOrderBegin() { return LevelOrderIterator(root); }
+    LevelOrderIterator levelOrderBegin() { return LevelOrderIterator(this->root.get()); }
      /**
      * @brief The begining iterator for the tree starting in the specified node and moving forward in level-order fashion.
      * @param root the root of the (sub)tree to traverse
@@ -726,7 +726,6 @@ private:
      */
     template<class Archive>
     void load(Archive & ar, const unsigned int version) {
-        delete this->root; // First delete automatically created auxiliary root
         this->root = nullptr;
         this->currentNode = nullptr;
         ar & BOOST_SERIALIZATION_NVP(root);
@@ -740,13 +739,12 @@ private:
 
 template<class NodeData>
 CCTree<NodeData>::CCTree() {
-    this->root = new CCTNode<NodeData>(AUXILIARY_ROOT_NAME);
-    this->currentNode = root;
+    this->root = std::make_unique<CCTNode<NodeData>>(AUXILIARY_ROOT_NAME);
+    this->currentNode = root.get();
 }
 
 template<class NodeData>
 CCTree<NodeData>::~CCTree() {
-    delete this->root;
     this->root = nullptr;
     this->currentNode = nullptr;
 }
@@ -763,7 +761,7 @@ void CCTree<NodeData>::setCurrentNode(CCTNode<NodeData> *node) {
 
 template<class NodeData>
 CCTNode<NodeData> * CCTree<NodeData>::getRootNode() {
-    return this->root;
+    return this->root.get();
 }
 
 template<class NodeData>
@@ -1002,7 +1000,7 @@ std::string CCTree<NodeData>::toString() const {
     const std::string offsetStr = " | ";
     std::stack<CCTNode<NodeData>*> stack;
 
-    stack.push(this->root);
+    stack.push(this->root.get());
 
     while(!stack.empty()) {
         CCTNode<NodeData>* currentNode = stack.top();
