@@ -696,7 +696,7 @@ protected:
         long long int nodesCnt = 0;
     };
 
-    TreeInfo* getTreeInfo();
+    std::unique_ptr<TreeInfo> getTreeInfo();
 
 
 private:
@@ -815,8 +815,8 @@ std::pair<int, std::vector<Operation<CCTNode<NodeData>>>> CCTree<NodeData>::tree
     auto updateCost = [](CCTNode<NodeData>* a, CCTNode<NodeData>* b) {return a->functionName == b->functionName ? 0 : 1;};
 
 
-    TreeInfo* thisTreeInfo = this->getTreeInfo();
-    TreeInfo* otherTreeInfo = other.getTreeInfo();
+    std::unique_ptr<TreeInfo> thisTreeInfo = this->getTreeInfo();
+    std::unique_ptr<TreeInfo> otherTreeInfo = other.getTreeInfo();
 
     std::vector<std::vector<int>> treeDistance(thisTreeInfo->nodesCnt, std::vector<int>(otherTreeInfo->nodesCnt, 0));
     std::vector<std::vector<std::vector<Operation<CCTNode<NodeData>>>>> operations(thisTreeInfo->nodesCnt, std::vector<std::vector<Operation<CCTNode<NodeData>>>>(otherTreeInfo->nodesCnt));
@@ -951,10 +951,10 @@ void CCTree<NodeData>::pruneSubtree(CCTNode<NodeData> *root, const long long int
 }
 
 template<class NodeData>
-typename CCTree<NodeData>::TreeInfo* CCTree<NodeData>::getTreeInfo() {
+std::unique_ptr<typename CCTree<NodeData>::TreeInfo> CCTree<NodeData>::getTreeInfo() {
     std::map<int, int> keyRootsMap{};
     std::map<CCTNode<NodeData>*, int> leftMostDescendantsMap{};
-    auto* treeInfo = new TreeInfo();
+    auto treeInfo = std::make_unique<TreeInfo>();
 
     int index = 0;
     for (auto it = this->postOrderBegin(); it != this->postOrderEnd(); ++it) {
@@ -990,7 +990,7 @@ typename CCTree<NodeData>::TreeInfo* CCTree<NodeData>::getTreeInfo() {
         treeInfo->keyRoots.push_back(keyRootIndex);
     }
     std::sort(treeInfo->keyRoots.begin(), treeInfo->keyRoots.end());
-    return treeInfo;
+    return std::forward(treeInfo);
 }
 
 template<class NodeData>
