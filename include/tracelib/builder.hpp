@@ -923,7 +923,7 @@ protected:
     /**
      * @brief Event processor that is called to process events from the parser and builds the structure based on them.
      */
-    EventProcessor<Graph>* eventProcessor;
+    std::unique_ptr<EventProcessor<Graph>> eventProcessor;
 
 public:
     /**
@@ -931,7 +931,7 @@ public:
      * from parsers of trace files.
      * @param eventProcessor a custom event processor can be specified to alter how structures is built
      */
-    explicit Builder(EventProcessor<Graph>* eventProcessor = nullptr);
+    explicit Builder(std::unique_ptr<EventProcessor<Graph>> &&eventProcessor = nullptr);
     /**
      * @brief Deletes the whole builder.
      */
@@ -985,16 +985,16 @@ private:
 };
 
 template<IsSpecializedGraphType Graph>
-Builder<Graph>::Builder(EventProcessor<Graph>* eventProcessor) {
+Builder<Graph>::Builder(std::unique_ptr<EventProcessor<Graph>> &&eventProcessor) {
     if (eventProcessor == nullptr) {
-        eventProcessor = new EventProcessor<Graph>();
+        eventProcessor = std::make_unique<EventProcessor<Graph>>();
     }
-    this->eventProcessor = eventProcessor;
+    this->eventProcessor = std::move(eventProcessor);
+    eventProcessor = nullptr;
 }
 
 template<IsSpecializedGraphType Graph>
 Builder<Graph>::~Builder() {
-    delete eventProcessor;
 }
 
 template<IsSpecializedGraphType Graph>
