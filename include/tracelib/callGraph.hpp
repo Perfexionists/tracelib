@@ -37,7 +37,7 @@ public:
     /**
      * @brief Data stored by the user in the node.
      */
-    NodeData *data = nullptr;
+    std::unique_ptr<NodeData> data = nullptr;
 
     /**
      * @brief Creates empty node.
@@ -99,12 +99,11 @@ private:
 
 template<class NodeData>
 CCGNode<NodeData>::CCGNode(const std::string &name) : functionName(name) {
-    this->data = new NodeData();
+    this->data = std::make_unique<NodeData>();
 }
 
 template<class NodeData>
 CCGNode<NodeData>::~CCGNode() {
-    delete this->data;
 }
 
 template<class NodeData>
