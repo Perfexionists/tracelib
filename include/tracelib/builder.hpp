@@ -124,7 +124,7 @@ protected:
      * @param tree calling context tree to store the information from event in
      * @param event the event to handle
      */
-    virtual void handleFunctionEnterEvent(CCTree<NodeData> *tree, Event *event);
+    virtual void handleFunctionEnterEvent(CCTree<NodeData> *tree, std::unique_ptr<Event> &&event);
     /**
      * @brief Handles a function enter event by storing the information in specified connected call graph.
      * It is meant to be overriden by the user if custom functionality is desired. The Disconnected Call Graph and
@@ -133,7 +133,7 @@ protected:
      * @param graph connected call graph to store the information from event in
      * @param event the event to handle
      */
-    virtual void handleFunctionEnterEvent(CCGraph<NodeData> *graph, Event *event);
+    virtual void handleFunctionEnterEvent(CCGraph<NodeData> *graph, std::unique_ptr<Event> &&event);
     /**
      * @brief Handles a function exit event by storing the information in specified calling context tree.
      * It is meant to be overriden by the user if custom functionality is desired. The Disconnected Call Graph and
@@ -199,7 +199,7 @@ protected:
      * @param tree calling context tree that should be updated with the information from specified event
      * @param event the event to be handled
      */
-    virtual void handleUSDTEnterEvent(CCTree<NodeData> *tree, Event *event);
+    virtual void handleUSDTEnterEvent(CCTree<NodeData> *tree, std::unique_ptr<Event> &&event);
     /**
      * @brief Handles a USDT enter event by storing the information in specified CCG. The USDT events are handled as if
      * function events by default.
@@ -209,7 +209,7 @@ protected:
      * @param graph connected call graph that should be updated with the information from specified event
      * @param event the event to be handled
      */
-    virtual void handleUSDTEnterEvent(CCGraph<NodeData> *graph, Event *event);
+    virtual void handleUSDTEnterEvent(CCGraph<NodeData> *graph, std::unique_ptr<Event> &&event);
     /**
      * @brief Handles a USDT exit event by storing the information in specified CCT. The USDT events are handled as if
      * function events by default.
@@ -523,47 +523,49 @@ void EventProcessor<Graph>::callEventHandler(SimpleGraph *graph, std::unique_ptr
 }
 
 template<IsSpecializedGraphType Graph>
-void EventProcessor<Graph>::handleFunctionEnterEvent(CCTree<NodeData> *tree, Event *event) {
+void EventProcessor<Graph>::handleFunctionEnterEvent(CCTree<NodeData> *tree, std::unique_ptr<Event> &&event) {
     if (tree == nullptr) {
         // Note: This should not happen. When building a Tree it is defined by the user and caught in
         // build function and when creating a Forest the tree is always created before this function
         // gets called.
         std::cerr << "[E]: Expected a coresponding tree for the event.\n";
-        delete event;
+        event = nullptr;
         return;
     }
 
+    const auto &name = event->name;
     // Store the function enter event until coresponding function exit is found
     // and the data within the event can be combined and stored properly in a node.
-    this->functionsBacklog.push_back(event);
+    this->functionsBacklog.push_back(std::forward<std::unique_ptr<Event>>(event));
 
     // Search for the called function in the children of
     // the function node that represents the caller.
-    auto child = tree->getChildOfCurrentNode(event->name);
+    auto child = tree->getChildOfCurrentNode(name);
     if (child == nullptr) {
         // Function was not called in this context yet. Create a new node
         // and change the currently running node to the newly called node.
-        child = tree->addNewChildToCurrentNode(event->name);
+        child = tree->addNewChildToCurrentNode(name);
     }
     tree->setCurrentNode(child);
     child = nullptr;
 }
 
 template<IsSpecializedGraphType Graph>
-void EventProcessor<Graph>::handleFunctionEnterEvent(CCGraph<NodeData> *graph, Event *event) {
+void EventProcessor<Graph>::handleFunctionEnterEvent(CCGraph<NodeData> *graph, std::unique_ptr<Event> &&event) {
+    const auto &name = event->name;
     // Store the function enter until coresponding function exit is found
     // and the data within the event can be combined and stored properly in a node.
-    this->functionsBacklog.push_back(event);
+    this->functionsBacklog.push_back(std::forward<std::unique_ptr<Event>>(event));
 
     // Search for the called function in the children (adjacent nodes) of the node that represents the caller.
-    auto* child = graph->getChildOfCurrentNode(event->name);
+    auto* child = graph->getChildOfCurrentNode(name);
     if (child == nullptr) {
         // Function was not called from this caller yet. Search all the nodes
         // and if node representing this function exists (if no create it)
         // and add it to the children of current node
-        child = graph->getNode(event->name);
+        child = graph->getNode(name);
         if (child == nullptr) {
-            child = graph->addNewNode(event->name);
+            child = graph->addNewNode(name);
         }
         graph->addChildToCurrentNode(child);
     }
@@ -740,16 +742,16 @@ void EventProcessor<Graph>::handleBasicBlockExitEvent(CCGraph<NodeData> *graph, 
 }
 
 template<IsSpecializedGraphType Graph>
-void EventProcessor<Graph>::handleUSDTEnterEvent(CCTree<NodeData> *tree, Event *event) {
+void EventProcessor<Graph>::handleUSDTEnterEvent(CCTree<NodeData> *tree, std::unique_ptr<Event> &&event) {
     // For now treated as a custom function
     // TODO: decide if the usdts should have separate backlog
     // TODO: decide if a separate tree/forest should be created for USDTs
-    this->handleFunctionEnterEvent(tree, event);
+    this->handleFunctionEnterEvent(tree, std::forward<std::unique_ptr<Event>>(event));
 }
 
 template<IsSpecializedGraphType Graph>
-void EventProcessor<Graph>::handleUSDTEnterEvent(CCGraph<NodeData> *graph, Event *event) {
-    this->handleFunctionEnterEvent(graph, event);
+void EventProcessor<Graph>::handleUSDTEnterEvent(CCGraph<NodeData> *graph, std::unique_ptr<Event> &&event) {
+    this->handleFunctionEnterEvent(graph, std::forward<std::unique_ptr<Event>>(event));
 }
 
 template<IsSpecializedGraphType Graph>
