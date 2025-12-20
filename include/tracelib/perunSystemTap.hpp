@@ -107,7 +107,7 @@ public:
      * @return PerunSystemTapEvent instance with data corresponding to an event from Perun's SystemTap tracer format.
      * Caller is responsible for deleting the event.
      */
-    PerunSystemTapEvent* getNextEvent() override;
+    std::unique_ptr<Event> getNextEvent() override;
 
     friend void from_json(const nlohmann::json& j, Metadata& metadata);
 };

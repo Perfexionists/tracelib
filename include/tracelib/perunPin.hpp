@@ -189,7 +189,7 @@ public:
      * @return PerunPinEvent instance with data corresponding to an event from Perun's Pin tracer format.
      * Caller is responsible for deleting the event.
      */
-    PerunPinEvent* getNextEvent() override;
+    std::unique_ptr<Event> getNextEvent() override;
 
     friend void from_json(const nlohmann::json& j, Location& location);
     friend void from_json(const nlohmann::json& j, FunctionMetadata& functionMetadata);

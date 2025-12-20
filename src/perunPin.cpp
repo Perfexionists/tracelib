@@ -45,7 +45,7 @@ void PerunPinParser::parseMetadata() {
     }
 }
 
-PerunPinEvent* PerunPinParser::getNextEvent() {
+std::unique_ptr<Event> PerunPinParser::getNextEvent() {
 
     // Retrieve a line from the file
     std::string currentLine;
@@ -55,7 +55,7 @@ PerunPinEvent* PerunPinParser::getNextEvent() {
     }
     this->currentLine = currentLine;
     if (currentLine.empty() or currentLine.find_first_not_of(" \t\n\v\f\r") == std::string::npos) {
-        return this->getNextEvent();
+        return std::move(this->getNextEvent());
     }
     this->numberOfEvents++;
 
@@ -160,9 +160,9 @@ PerunPinEvent* PerunPinParser::getNextEvent() {
         exit(1);
     }
 
-    auto* event = new PerunPinEvent(eventType, functionName, "", tid, pid, -1, data);
+    auto event = std::make_unique<PerunPinEvent>(eventType, functionName, "", tid, pid, -1, data);
     event->id = id;
-    return event;
+    return std::move(event);
 }
 
 void from_json(const nlohmann::json &j, PerunPinParser::Location &location) {

@@ -40,7 +40,7 @@ void PerfFoldedParser::parseMetadata() {
     Parser::parseMetadata();
 }
 
-PerfFoldedEvent *PerfFoldedParser::getNextEvent() {
+std::unique_ptr<Event> PerfFoldedParser::getNextEvent() {
     // Retrieve a line from the file
     std::string currentLine;
     if (!std::getline(this->traceFile, currentLine)) {
@@ -49,7 +49,7 @@ PerfFoldedEvent *PerfFoldedParser::getNextEvent() {
     }
     this->currentLine = currentLine;
     if (currentLine.empty() or currentLine.find_first_not_of(" \t\n\v\f\r") == std::string::npos) {
-        return this->getNextEvent();
+        return std::move(this->getNextEvent());
     }
     this->numberOfEvents++;
 
@@ -85,7 +85,7 @@ PerfFoldedEvent *PerfFoldedParser::getNextEvent() {
         start = end + 1;
     }
 
-    auto* event = new PerfFoldedEvent(Event::STACK_SAMPLE, stackSample.back());
+    auto event = std::make_unique<PerfFoldedEvent>(Event::STACK_SAMPLE, stackSample.back());
     event->stackSample = stackSample;
     event->processName = processName;
     event->pid = processId;

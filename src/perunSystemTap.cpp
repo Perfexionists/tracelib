@@ -46,7 +46,7 @@ void PerunSystemTapParser::parseMetadata() {
     }
 }
 
-PerunSystemTapEvent* PerunSystemTapParser::getNextEvent() {
+std::unique_ptr<Event> PerunSystemTapParser::getNextEvent() {
     // Retrieve a line from the file
     std::string currentLine;
     if (!std::getline(this->traceFile, currentLine)) {
@@ -55,7 +55,7 @@ PerunSystemTapEvent* PerunSystemTapParser::getNextEvent() {
     }
     this->currentLine = currentLine;
     if (currentLine.empty() or currentLine.find_first_not_of(" \t\n\v\f\r") == std::string::npos) {
-        return this->getNextEvent();
+        return std::move(this->getNextEvent());
     }
     this->numberOfEvents++;
 
@@ -98,7 +98,7 @@ PerunSystemTapEvent* PerunSystemTapParser::getNextEvent() {
     long long int timestamp = -1;
     int numOfScannedValues;
     PerunSystemTapEventData* data;
-    PerunSystemTapEvent* event;
+    std::unique_ptr<PerunSystemTapEvent> event;
     switch (perunEventType) {
         case PROCESS_BEGIN:
             numOfScannedValues = std::sscanf(values.c_str(), "%d %d %d %lld", &tid, &pid, &ppid, &timestamp);
@@ -107,7 +107,7 @@ PerunSystemTapEvent* PerunSystemTapParser::getNextEvent() {
                 exit(1);
             }
             data = new PerunSystemTapEventData(timestamp);
-            event = new PerunSystemTapEvent(Event::PROCESS_ENTER, name, name, tid, pid, ppid, data);
+            event = std::make_unique<PerunSystemTapEvent>(Event::PROCESS_ENTER, name, name, tid, pid, ppid, data);
             break;
         case PROCESS_END:
             numOfScannedValues = std::sscanf(values.c_str(), "%d %d %d %lld", &tid, &pid, &ppid, &timestamp);
@@ -116,7 +116,7 @@ PerunSystemTapEvent* PerunSystemTapParser::getNextEvent() {
                 exit(1);
             }
             data = new PerunSystemTapEventData(timestamp);
-            event = new PerunSystemTapEvent(Event::PROCESS_EXIT, name, name, tid, pid, ppid, data);
+            event = std::make_unique<PerunSystemTapEvent>(Event::PROCESS_EXIT, name, name, tid, pid, ppid, data);
             break;
         case THREAD_BEGIN:
             numOfScannedValues = std::sscanf(values.c_str(), "%d %d %lld", &tid, &pid, &timestamp);
@@ -125,7 +125,7 @@ PerunSystemTapEvent* PerunSystemTapParser::getNextEvent() {
                 exit(1);
             }
             data = new PerunSystemTapEventData(timestamp);
-            event = new PerunSystemTapEvent(Event::THREAD_ENTER, name, name, tid, pid, -1, data);
+            event = std::make_unique<PerunSystemTapEvent>(Event::THREAD_ENTER, name, name, tid, pid, -1, data);
             break;
         case THREAD_END:
             numOfScannedValues = std::sscanf(values.c_str(), "%d %d %lld", &tid, &pid, &timestamp);
@@ -134,7 +134,7 @@ PerunSystemTapEvent* PerunSystemTapParser::getNextEvent() {
                 exit(1);
             }
             data = new PerunSystemTapEventData(timestamp);
-            event = new PerunSystemTapEvent(Event::THREAD_EXIT, name, name, tid, pid, -1, data);
+            event = std::make_unique<PerunSystemTapEvent>(Event::THREAD_EXIT, name, name, tid, pid, -1, data);
             break;
         case USDT_BEGIN:
             numOfScannedValues = std::sscanf(values.c_str(), "%d %lld", &tid, &timestamp);
@@ -143,7 +143,7 @@ PerunSystemTapEvent* PerunSystemTapParser::getNextEvent() {
                 exit(1);
             }
             data = new PerunSystemTapEventData(timestamp);
-            event = new PerunSystemTapEvent(Event::USDT_ENTER, name, "", tid, -1, -1, data);
+            event = std::make_unique<PerunSystemTapEvent>(Event::USDT_ENTER, name, "", tid, -1, -1, data);
             break;
         case USDT_END:
             numOfScannedValues = std::sscanf(values.c_str(), "%d %lld", &tid, &timestamp);
@@ -152,7 +152,7 @@ PerunSystemTapEvent* PerunSystemTapParser::getNextEvent() {
                 exit(1);
             }
             data = new PerunSystemTapEventData(timestamp);
-            event = new PerunSystemTapEvent(Event::USDT_EXIT, name, "", tid, -1, -1, data);
+            event = std::make_unique<PerunSystemTapEvent>(Event::USDT_EXIT, name, "", tid, -1, -1, data);
             break;
         case FUNC_BEGIN:
             numOfScannedValues = std::sscanf(values.c_str(), "%d %lld", &tid, &timestamp);
@@ -161,7 +161,7 @@ PerunSystemTapEvent* PerunSystemTapParser::getNextEvent() {
                 exit(1);
             }
             data = new PerunSystemTapEventData(timestamp);
-            event = new PerunSystemTapEvent(Event::FUNCTION_ENTER, name, "", tid, -1, -1, data);
+            event = std::make_unique<PerunSystemTapEvent>(Event::FUNCTION_ENTER, name, "", tid, -1, -1, data);
             this->numberOfFunctionCalls++;
             break;
         case FUNC_END:
@@ -171,11 +171,11 @@ PerunSystemTapEvent* PerunSystemTapParser::getNextEvent() {
                 exit(1);
             }
             data = new PerunSystemTapEventData(timestamp);
-            event = new PerunSystemTapEvent(Event::FUNCTION_EXIT, name, "", tid, -1, -1, data);
+            event = std::make_unique<PerunSystemTapEvent>(Event::FUNCTION_EXIT, name, "", tid, -1, -1, data);
             break;
         case CORRUPT:
             // Skips the corrupt event
-            return this->getNextEvent();
+            return std::move(this->getNextEvent());
         default:
             std::cerr << "[E]: Unexpected format of trace file!" << std::endl;
             exit(1);

@@ -78,7 +78,7 @@ public:
      * @return PerfFoldedEvent instance with data corresponding to an event from Perf Folded Event.
      * Caller is responsible for deleting the event.
      */
-    PerfFoldedEvent* getNextEvent() override;
+    std::unique_ptr<Event> getNextEvent() override;
 };
 
 // CCT node

@@ -42,7 +42,7 @@ public:
      * Caller is responsible for deleting the event.
      * @return an event parsed from the trace file and enriched by the metadata
      */
-    virtual Event* getNextEvent() = 0;
+    virtual std::unique_ptr<Event> getNextEvent() = 0;
 
     /**
      * @brief Set new trace file path. The old file will be closed and newone will be used to create next events.
