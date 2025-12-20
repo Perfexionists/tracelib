@@ -375,7 +375,7 @@ protected:
      * @param event the event with new information for the specified graph
      */
     template<IsSpecializedSimpleGraphType SimpleGraph>
-    void callEventHandler(SimpleGraph* graph, Event* event);
+    void callEventHandler(SimpleGraph* graph, std::unique_ptr<Event> &&event);
 };
 
 
@@ -478,46 +478,46 @@ void EventProcessor<Graph>::cleanUpHelperStructures() {
 
 template<IsSpecializedGraphType Graph>
 template<IsSpecializedSimpleGraphType SimpleGraph>
-void EventProcessor<Graph>::callEventHandler(SimpleGraph *graph, Event *event) {
+void EventProcessor<Graph>::callEventHandler(SimpleGraph *graph, std::unique_ptr<Event> &&event) {
      switch (event->type) {
         case Event::FUNCTION_ENTER:
-            this->handleFunctionEnterEvent(graph, event);
+            this->handleFunctionEnterEvent(graph, std::forward<std::unique_ptr<Event>>(event));
             break;
         case Event::FUNCTION_EXIT:
-            this->handleFunctionExitEvent(graph, event);
+            this->handleFunctionExitEvent(graph, std::forward<std::unique_ptr<Event>>(event));
             break;
         case Event::BASIC_BLOCK_ENTER:
-            this->handleBasicBlockEnterEvent(graph, event);
+            this->handleBasicBlockEnterEvent(graph, std::forward<std::unique_ptr<Event>>(event));
             break;
         case Event::BASIC_BLOCK_EXIT:
-            this->handleBasicBlockExitEvent(graph, event);
+            this->handleBasicBlockExitEvent(graph, std::forward<std::unique_ptr<Event>>(event));
             break;
         case Event::USDT_ENTER:
-            this->handleUSDTEnterEvent(graph, event);
+            this->handleUSDTEnterEvent(graph, std::forward<std::unique_ptr<Event>>(event));
             break;
         case Event::USDT_EXIT:
-            this->handleUSDTExitEvent(graph, event);
+            this->handleUSDTExitEvent(graph, std::forward<std::unique_ptr<Event>>(event));
             break;
         case Event::PROCESS_ENTER:
-            this->handleProcessEnterEvent(graph, event);
+            this->handleProcessEnterEvent(graph, std::forward<std::unique_ptr<Event>>(event));
             break;
         case Event::PROCESS_EXIT:
-            this->handleProcessExitEvent(graph, event);
+            this->handleProcessExitEvent(graph, std::forward<std::unique_ptr<Event>>(event));
             break;
         case Event::THREAD_ENTER:
-            this->handleThreadEnterEvent(graph, event);
+            this->handleThreadEnterEvent(graph, std::forward<std::unique_ptr<Event>>(event));
             break;
         case Event::THREAD_EXIT:
-            this->handleThreadExitEvent(graph, event);
+            this->handleThreadExitEvent(graph, std::forward<std::unique_ptr<Event>>(event));
             break;
         case Event::STACK_SAMPLE:
-            this->handleStackSampleEvent(graph, event);
+            this->handleStackSampleEvent(graph, std::forward<std::unique_ptr<Event>>(event));
             break;
         case Event::CUSTOM:
-            this->handleCustomEvent(graph, event);
+            this->handleCustomEvent(graph, std::forward<std::unique_ptr<Event>>(event));
             break;
         default:
-            this->handleSkippedEvent(event);
+            this->handleSkippedEvent(std::forward<std::unique_ptr<Event>>(event));
             break;
     }
 }
