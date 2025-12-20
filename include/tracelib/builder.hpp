@@ -91,7 +91,7 @@ public:
      * @param event the event with information that's to be processed into a graph
      */
     template<IsSpecializedSimpleGraphType SimpleGraph>
-    void processEvent(SimpleGraph* graph, Event *event);
+    void processEvent(SimpleGraph* graph, std::unique_ptr<Event> &&event);
 
     /**
      * @brief Process the information from specified event into the specified graph.
@@ -100,7 +100,7 @@ public:
      * @param event the event with information that's to be processed into a graph
      */
     template<IsSpecializedContainerGraphType ContainerGraph>
-    void processEvent(ContainerGraph* graph, Event *event);
+    void processEvent(ContainerGraph* graph, std::unique_ptr<Event> &&event);
 
     /**
      * @brief a method that iterates over skipped events in the function/basic block backlog and calls handleSkippedEvent
@@ -386,7 +386,7 @@ EventProcessor<Graph>::~EventProcessor() {
 
 template<IsSpecializedGraphType Graph>
 template<IsSpecializedSimpleGraphType SimpleGraph>
-void EventProcessor<Graph>::processEvent(SimpleGraph *graph, Event *event) {
+void EventProcessor<Graph>::processEvent(SimpleGraph *graph, std::unique_ptr<Event> &&event) {
     // Normalize event pid and tid to the first event since we are building a tree or a graph from this function
     // and we don't expect the pid and tid to change
     if (this->isFirstEvent) {
@@ -405,12 +405,12 @@ void EventProcessor<Graph>::processEvent(SimpleGraph *graph, Event *event) {
         event->pid = this->pid;
         event->tid = this->tid;
     }
-    this->callEventHandler(graph, event);
+    this->callEventHandler(graph, std::forward<std::unique_ptr<Event>>(event));
 }
 
 template<IsSpecializedGraphType Graph>
 template<IsSpecializedContainerGraphType ContainerGraph>
-void EventProcessor<Graph>::processEvent(ContainerGraph* graph, Event *event) {
+void EventProcessor<Graph>::processEvent(ContainerGraph* graph, std::unique_ptr<Event> &&event) {
     int pid = event->pid;
     int tid = event->tid;
 
@@ -441,7 +441,7 @@ void EventProcessor<Graph>::processEvent(ContainerGraph* graph, Event *event) {
             this->tidToProcessMap.emplace(event->tid, event->pid);  // Emplacing the original values
             currentTree = graph->addNewTree(event->pid, event->tid, event->processName);
         }
-        this->callEventHandler(currentTree, event);
+        this->callEventHandler(currentTree, std::forward<std::unique_ptr<Event>>(event));
     } else if constexpr (IsSpecializationOf<DCGraph, ContainerGraph>::value) {
         auto* currentGraph = graph->getGraph(pid, tid); // Searching for the adjusted pid and tid
         if (currentGraph == nullptr and event->isEnterEvent() and event->type != Event::BASIC_BLOCK_ENTER) {
@@ -453,7 +453,7 @@ void EventProcessor<Graph>::processEvent(ContainerGraph* graph, Event *event) {
                 this->currentPaths.emplace(std::make_pair(event->pid, event->tid), std::vector<CCGNode<NodeData>*>{currentGraph->getCurrentNode()});
             }
         }
-        this->callEventHandler(currentGraph, event);
+        this->callEventHandler(currentGraph, std::forward<std::unique_ptr<Event>>(event));
         //Note: event handlers are responsible for updating current paths if exiting a function
     }
 }
@@ -950,7 +950,7 @@ public:
      * @param graph one of the supported graph structures (CCTree, CCForest, CCGraph, or DCGraph)
      * @param event an event that should be used to update the specified graph
      */
-    void processEvent(Graph* graph, Event* event);
+    void processEvent(Graph* graph, std::unique_ptr<Event> &&event);
 
     /**
      * @brief Serializes the specified graph structure (CCTree, CCFores, CCGraph, or DCGraph) into specified format and
@@ -1007,14 +1007,9 @@ void Builder<Graph>::build(Graph *graph, Parser *parser) {
     // parse the metadata before going through the trace itself
     parser->parseMetadata();
 
-    Event* currentEvent = parser->getNextEvent();
-    while (currentEvent) {
-        // Note: processEvent is supposed to delete the pointer when the event is fully processed
-        // Some of the enter events are stored in backlogs where they wait for the appropriate exit event.
-        // This means that freeing them after the processEvent call is not viable, since they are fully processed
-        // only after the exit event is processed.
-        this->eventProcessor->processEvent(graph, currentEvent);
-        currentEvent = parser->getNextEvent();
+    std::unique_ptr<Event> currentEvent = parser->getNextEvent();
+    while ((currentEvent = parser->getNextEvent()) != nullptr) {
+        this->eventProcessor->processEvent(graph, std::move(currentEvent));
     }
 
     this->eventProcessor->processSkippedEvents();
@@ -1022,11 +1017,11 @@ void Builder<Graph>::build(Graph *graph, Parser *parser) {
 }
 
 template<IsSpecializedGraphType Graph>
-void Builder<Graph>::processEvent(Graph *graph, Event *event) {
+void Builder<Graph>::processEvent(Graph *graph, std::unique_ptr<Event> &&event) {
     if (graph == nullptr or event == nullptr) {
         return;
     }
-    this->eventProcessor->processEvent(graph, event);
+    this->eventProcessor->processEvent(graph, std::forward<std::unique_ptr<Event>>(event));
 }
 
 template<IsSpecializedGraphType Graph>
