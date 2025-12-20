@@ -142,7 +142,7 @@ protected:
      * @param tree calling context tree to store the information from event in
      * @param event the event to handle
      */
-    virtual void handleFunctionExitEvent(CCTree<NodeData> *tree, Event *event);
+    virtual void handleFunctionExitEvent(CCTree<NodeData> *tree, std::unique_ptr<Event> &&event);
     /**
      * @brief Handles a function exit event by storing the information in specified connected call graph.
      * It is meant to be overriden by the user if custom functionality is desired. The Disconnected Call Graph and
@@ -151,7 +151,7 @@ protected:
      * @param graph connected call graph to store the information from event in
      * @param event the event to handle
      */
-    virtual void handleFunctionExitEvent(CCGraph<NodeData> *graph, Event *event);
+    virtual void handleFunctionExitEvent(CCGraph<NodeData> *graph, std::unique_ptr<Event> &&event);
 
     /**
      * @brief Handles a basic block enter event by storing the information in specified CCT.
@@ -219,7 +219,7 @@ protected:
      * @param tree calling context tree that should be updated with the information from specified event
      * @param event the event to be handled
      */
-    virtual void handleUSDTExitEvent(CCTree<NodeData> *tree, Event *event);
+    virtual void handleUSDTExitEvent(CCTree<NodeData> *tree, std::unique_ptr<Event> &&event);
     /**
      * @brief Handles a USDT exit event by storing the information in specified CCG. The USDT events are handled as if
      * function events by default.
@@ -229,7 +229,7 @@ protected:
      * @param graph connected call graph that should be updated with the information from specified event
      * @param event the event to be handled
      */
-    virtual void handleUSDTExitEvent(CCGraph<NodeData> *graph, Event *event);
+    virtual void handleUSDTExitEvent(CCGraph<NodeData> *graph, std::unique_ptr<Event> &&event);
 
     /**
      * @brief Handles a process enter event by storing the information in specified CCT. These events are usually
@@ -574,24 +574,23 @@ void EventProcessor<Graph>::handleFunctionEnterEvent(CCGraph<NodeData> *graph, s
 }
 
 template<IsSpecializedGraphType Graph>
-void EventProcessor<Graph>::handleFunctionExitEvent(CCTree<NodeData> *tree, Event *event) {
+void EventProcessor<Graph>::handleFunctionExitEvent(CCTree<NodeData> *tree, std::unique_ptr<Event> &&event) {
     if (tree == nullptr) {
         // Unexpected event without a tree
         std::cerr << "[W]: Skipping an event "
                 << "(" << event->getEventTypeAsString() << ") "
                 << "that should and does not have a tree!" << std::endl;
-        delete event;
+        event = nullptr;
         return;
     }
 
     bool foundTheEnterEventInBacklog = false;
     for (auto it = this->functionsBacklog.rbegin(); it != this->functionsBacklog.rend(); ++it) {
-        auto* backloggedEnterEvent = *it;
+        auto& backloggedEnterEvent = *it;
         if (event->isComplementaryEvent(backloggedEnterEvent)) {
             foundTheEnterEventInBacklog = true;
-            tree->getCurrentNode()->data->combine(backloggedEnterEvent, event);
+            tree->getCurrentNode()->data->combine(std::forward<std::unique_ptr<Event>>(backloggedEnterEvent), std::forward<std::unique_ptr<Event>>(event));
             this->functionsBacklog.erase((it + 1).base());
-            delete backloggedEnterEvent;
             break;
         }
     }
@@ -600,17 +599,17 @@ void EventProcessor<Graph>::handleFunctionExitEvent(CCTree<NodeData> *tree, Even
                 "Could not update the data in node!" << std::endl;
     }
     tree->setCurrentNode(tree->getParentOfCurrentNode());
-    delete event;
+    event = nullptr;
 }
 
 template<IsSpecializedGraphType Graph>
-void EventProcessor<Graph>::handleFunctionExitEvent(CCGraph<NodeData> *graph, Event *event) {
+void EventProcessor<Graph>::handleFunctionExitEvent(CCGraph<NodeData> *graph, std::unique_ptr<Event> &&event) {
     if (graph == nullptr) {
         // Unexpected event without a graph
         std::cerr << "[W]: Skipping an event "
                 << "(" << event->getEventTypeAsString() << ") "
                 << "that should and does not have a graph!" << std::endl;
-        delete event;
+        event = nullptr;
         return;
     }
     bool foundTheEnterEventInBacklog = false;
@@ -618,8 +617,7 @@ void EventProcessor<Graph>::handleFunctionExitEvent(CCGraph<NodeData> *graph, Ev
         auto backloggedEnterEvent = *it;
         if (event->isComplementaryEvent(backloggedEnterEvent)) {
             foundTheEnterEventInBacklog = true;
-            graph->getCurrentNode()->data->combine(backloggedEnterEvent, event);
-            delete backloggedEnterEvent;
+            graph->getCurrentNode()->data->combine(std::forward<std::unique_ptr<Event>>(backloggedEnterEvent), std::forward<std::unique_ptr<Event>>(event));
             this->functionsBacklog.erase((it + 1).base());
             break;
         }
@@ -633,7 +631,7 @@ void EventProcessor<Graph>::handleFunctionExitEvent(CCGraph<NodeData> *graph, Ev
 
     auto *parent = currentPath[currentPath.size() - 1];
     graph->setCurrentNode(parent);
-    delete event;
+    event = nullptr;
 }
 
 template<IsSpecializedGraphType Graph>
@@ -755,16 +753,16 @@ void EventProcessor<Graph>::handleUSDTEnterEvent(CCGraph<NodeData> *graph, std::
 }
 
 template<IsSpecializedGraphType Graph>
-void EventProcessor<Graph>::handleUSDTExitEvent(CCTree<NodeData> *tree, Event *event) {
+void EventProcessor<Graph>::handleUSDTExitEvent(CCTree<NodeData> *tree, std::unique_ptr<Event> &&event) {
     // For now treated as a custom function
     // TODO: decide if the usdts should have separate backlog
     // TODO: decide if a separate tree/forest should be created for USDTs
-    this->handleFunctionExitEvent(tree, event);
+    this->handleFunctionExitEvent(tree, std::forward<std::unique_ptr<Event>>(event));
 }
 
 template<IsSpecializedGraphType Graph>
-void EventProcessor<Graph>::handleUSDTExitEvent(CCGraph<NodeData> *graph, Event *event) {
-   this->handleFunctionExitEvent(graph, event);
+void EventProcessor<Graph>::handleUSDTExitEvent(CCGraph<NodeData> *graph, std::unique_ptr<Event> &&event) {
+   this->handleFunctionExitEvent(graph, std::forward<std::unique_ptr<Event>>(event));
 }
 
 template<IsSpecializedGraphType Graph>
