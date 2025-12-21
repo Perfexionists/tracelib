@@ -179,7 +179,7 @@ protected:
      * @param tree calling context tree that should be updated with the information from specified event
      * @param event the event to be handled
      */
-    virtual void handleBasicBlockExitEvent(CCTree<NodeData> *tree, Event *event);
+    virtual void handleBasicBlockExitEvent(CCTree<NodeData> *tree, std::unique_ptr<Event> &&event);
     /**
      * @brief Handles a basic block exit event by storing the information in specified CCG.
      * It is meant to be overriden by the user if custom functionality is desired. The Disconnected Call Graph and
@@ -188,7 +188,7 @@ protected:
      * @param graph connected call graph that should be updated with the information from specified event
      * @param event the event to be handled
      */
-    virtual void handleBasicBlockExitEvent(CCGraph<NodeData> *graph, Event *event);
+    virtual void handleBasicBlockExitEvent(CCGraph<NodeData> *graph, std::unique_ptr<Event> &&event);
 
     /**
      * @brief Handles a USDT enter event by storing the information in specified CCT. The USDT events are handled as if
@@ -366,7 +366,7 @@ protected:
      * It is meant to be overriden with cusom logic by the user.
      * @param event the event that was not processed before
      */
-    virtual void handleSkippedEvent(Event *event);
+    virtual void handleSkippedEvent(std::unique_ptr<Event> &&event);
 
     /**
      * @brief This function calls appropriate event handler for specified event and graph.
@@ -655,13 +655,13 @@ void EventProcessor<Graph>::handleBasicBlockEnterEvent(CCGraph<NodeData> *graph,
 }
 
 template<IsSpecializedGraphType Graph>
-void EventProcessor<Graph>::handleBasicBlockExitEvent(CCTree<NodeData> *tree, Event *event) {
+void EventProcessor<Graph>::handleBasicBlockExitEvent(CCTree<NodeData> *tree, std::unique_ptr<Event> &&event) {
     if (tree == nullptr) {
         // Unexpected event without a tree
         std::cerr << "[W]: Skipping an event "
                 << "(" << event->getEventTypeAsString() << ") "
                 << "that should and does not have a tree!" << std::endl;
-        delete event;
+        event = nullptr;
         return;
     }
     bool foundTheEnterEventInBacklog = false;
@@ -679,10 +679,9 @@ void EventProcessor<Graph>::handleBasicBlockExitEvent(CCTree<NodeData> *tree, Ev
                 // granularity and was not gathered. Thus, this basic block does not have a parent function and is skipped.
             }
             if (nodeToUpdate) {
-                nodeToUpdate->data->combine(backloggedEnterEvent, event);
+                nodeToUpdate->data->combine(std::forward<std::unique_ptr<Event>>(*it), std::forward<std::unique_ptr<Event>>(event));
             }
             this->basicBlocksBacklog.erase((it + 1).base());
-            delete backloggedEnterEvent;
             break;
         }
     }
@@ -691,17 +690,17 @@ void EventProcessor<Graph>::handleBasicBlockExitEvent(CCTree<NodeData> *tree, Ev
                   <<  "(" <<  event->name << ")" << " at basic block exit."
                   << "Could not update the data in node!" << std::endl;
     }
-    delete event;
+    event = nullptr;
 }
 
 template<IsSpecializedGraphType Graph>
-void EventProcessor<Graph>::handleBasicBlockExitEvent(CCGraph<NodeData> *graph, Event *event) {
+void EventProcessor<Graph>::handleBasicBlockExitEvent(CCGraph<NodeData> *graph, std::unique_ptr<Event> &&event) {
     if (graph == nullptr) {
         // Unexpected event without a tree
         std::cerr << "[W]: Skipping an event "
                 << "(" << event->getEventTypeAsString() << ") "
                 << "that should and does not have a graph!" << std::endl;
-        delete event;
+        event = nullptr;
         return;
     }
 
@@ -716,9 +715,8 @@ void EventProcessor<Graph>::handleBasicBlockExitEvent(CCGraph<NodeData> *graph, 
                 nodeToUpdate = graph->getChildOfCurrentNode(event->name);
             }
             if (nodeToUpdate) {
-                nodeToUpdate->data->combine(backloggedEnterEvent, event);
+                nodeToUpdate->data->combine(std::forward<std::unique_ptr<Event>>(*it), std::forward<std::unique_ptr<Event>>(event));
             }
-            delete backloggedEnterEvent;
             this->basicBlocksBacklog.erase((it + 1).base());
             break;
         }
@@ -728,7 +726,7 @@ void EventProcessor<Graph>::handleBasicBlockExitEvent(CCGraph<NodeData> *graph, 
                   <<  "(" <<  event->name << ")" << " at basic block exit."
                   << "Could not update the data in node!" << std::endl;
     }
-    delete event;
+    event = nullptr;
 }
 
 template<IsSpecializedGraphType Graph>
@@ -877,11 +875,10 @@ void EventProcessor<Graph>::handleCustomEvent(CCGraph<NodeData> *graph, std::uni
 }
 
 template<IsSpecializedGraphType Graph>
-void EventProcessor<Graph>::handleSkippedEvent(Event *event) {
+void EventProcessor<Graph>::handleSkippedEvent(std::unique_ptr<Event> &&event) {
     // Note: User can reimplement this function in deriving class to algorithmically go
     // through all missmatched events in backlogs.
-    // Default implementation does nothing.
-    // Contents of the structures will be deleted with destructor of the builder.
+    // Default implementation only deletes the event.
 }
 
 template<IsSpecializedGraphType Graph>
