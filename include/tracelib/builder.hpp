@@ -37,11 +37,11 @@ private:
      * @brief Backlog of function enter events that need to be paired with exit events. Basically simulates
      * the call stack
      */
-    std::vector<Event*> functionsBacklog{};
+    std::vector<std::unique_ptr<Event>> functionsBacklog{};
     /**
      * @brief Backlog of basic block enter events that need to be paired with exit events.
      */
-    std::vector<Event*> basicBlocksBacklog{};
+    std::vector<std::unique_ptr<Event>> basicBlocksBacklog{};
     /**
      * @brief stores paths for Connected Call Graphs. For every CCG mapped by pid and tid pair. It is used to
      * be able to get to the parent of current node.
@@ -460,14 +460,6 @@ void EventProcessor<Graph>::processEvent(ContainerGraph* graph, std::unique_ptr<
 
 template<IsSpecializedGraphType Graph>
 void EventProcessor<Graph>::cleanUpHelperStructures() {
-    for (auto* event : this->functionsBacklog) {
-        delete event;
-    }
-    this->functionsBacklog.clear();
-    for (auto* event : this->basicBlocksBacklog) {
-        delete event;
-    }
-    this->basicBlocksBacklog.clear();
     this->tidToProcessMap.clear();
     this->currentPaths.clear(); // Note: don't need to delete the nodes - the graph structure is responsible for them
     this->isFirstEvent = true;
@@ -536,7 +528,7 @@ void EventProcessor<Graph>::handleFunctionEnterEvent(CCTree<NodeData> *tree, std
     const auto &name = event->name;
     // Store the function enter event until coresponding function exit is found
     // and the data within the event can be combined and stored properly in a node.
-    this->functionsBacklog.push_back(std::forward<std::unique_ptr<Event>>(event));
+    this->functionsBacklog.emplace_back(std::forward<std::unique_ptr<Event>>(event));
 
     // Search for the called function in the children of
     // the function node that represents the caller.
@@ -555,7 +547,7 @@ void EventProcessor<Graph>::handleFunctionEnterEvent(CCGraph<NodeData> *graph, s
     const auto &name = event->name;
     // Store the function enter until coresponding function exit is found
     // and the data within the event can be combined and stored properly in a node.
-    this->functionsBacklog.push_back(std::forward<std::unique_ptr<Event>>(event));
+    this->functionsBacklog.emplace_back(std::forward<std::unique_ptr<Event>>(event));
 
     // Search for the called function in the children (adjacent nodes) of the node that represents the caller.
     auto* child = graph->getChildOfCurrentNode(name);
@@ -586,7 +578,7 @@ void EventProcessor<Graph>::handleFunctionExitEvent(CCTree<NodeData> *tree, std:
 
     bool foundTheEnterEventInBacklog = false;
     for (auto it = this->functionsBacklog.rbegin(); it != this->functionsBacklog.rend(); ++it) {
-        auto& backloggedEnterEvent = *it;
+        auto *backloggedEnterEvent = it->get();
         if (event->isComplementaryEvent(backloggedEnterEvent)) {
             foundTheEnterEventInBacklog = true;
             tree->getCurrentNode()->data->combine(std::forward<std::unique_ptr<Event>>(backloggedEnterEvent), std::forward<std::unique_ptr<Event>>(event));
@@ -614,7 +606,7 @@ void EventProcessor<Graph>::handleFunctionExitEvent(CCGraph<NodeData> *graph, st
     }
     bool foundTheEnterEventInBacklog = false;
     for (auto it = this->functionsBacklog.rbegin(); it != this->functionsBacklog.rend(); ++it) {
-        auto backloggedEnterEvent = *it;
+        auto *backloggedEnterEvent = it->get();
         if (event->isComplementaryEvent(backloggedEnterEvent)) {
             foundTheEnterEventInBacklog = true;
             graph->getCurrentNode()->data->combine(std::forward<std::unique_ptr<Event>>(backloggedEnterEvent), std::forward<std::unique_ptr<Event>>(event));
@@ -645,7 +637,7 @@ void EventProcessor<Graph>::handleBasicBlockEnterEvent(CCTree<NodeData> *tree, s
         return;
     }
     // Store the event in backlog and wait for its coresponding closing event to process it
-    this->basicBlocksBacklog.push_back(std::forward<std::unique_ptr<Event>>(event));
+    this->basicBlocksBacklog.emplace_back(std::forward<std::unique_ptr<Event>>(event));
 }
 
 template<IsSpecializedGraphType Graph>
@@ -659,7 +651,7 @@ void EventProcessor<Graph>::handleBasicBlockEnterEvent(CCGraph<NodeData> *graph,
         return;
     }
 
-    this->basicBlocksBacklog.push_back(std::forward<std::unique_ptr<Event>>(event));
+    this->basicBlocksBacklog.emplace_back(std::forward<std::unique_ptr<Event>>(event));
 }
 
 template<IsSpecializedGraphType Graph>
@@ -674,7 +666,7 @@ void EventProcessor<Graph>::handleBasicBlockExitEvent(CCTree<NodeData> *tree, Ev
     }
     bool foundTheEnterEventInBacklog = false;
     for (auto it = this->basicBlocksBacklog.rbegin(); it != this->basicBlocksBacklog.rend(); ++it) {
-        auto backloggedEnterEvent = *it;
+        auto *backloggedEnterEvent = it->get();
         if (event->isComplementaryEvent(backloggedEnterEvent)) {
             foundTheEnterEventInBacklog = true;
             auto *nodeToUpdate = tree->getCurrentNode();
@@ -715,7 +707,7 @@ void EventProcessor<Graph>::handleBasicBlockExitEvent(CCGraph<NodeData> *graph, 
 
     bool foundTheEnterEventInBacklog = false;
     for (auto it = this->basicBlocksBacklog.rbegin(); it != this->basicBlocksBacklog.rend(); ++it) {
-        auto backloggedEnterEvent = *it;
+        auto *backloggedEnterEvent = it->get();
         if (event->isComplementaryEvent(backloggedEnterEvent)) {
             foundTheEnterEventInBacklog = true;
             auto *nodeToUpdate = graph->getCurrentNode();
@@ -894,12 +886,15 @@ void EventProcessor<Graph>::handleSkippedEvent(Event *event) {
 
 template<IsSpecializedGraphType Graph>
 void EventProcessor<Graph>::processSkippedEvents() {
-    for (auto* event : this->functionsBacklog) {
-        this->handleSkippedEvent(event);
+    for (auto& event : this->functionsBacklog) {
+        this->handleSkippedEvent(std::forward<std::unique_ptr<Event>>(event));
     }
-    for (auto* event : this->basicBlocksBacklog) {
-        this->handleSkippedEvent(event);
+    this->functionsBacklog.clear();
+
+    for (auto& event : this->basicBlocksBacklog) {
+        this->handleSkippedEvent(std::forward<std::unique_ptr<Event>>(event));
     }
+    this->basicBlocksBacklog.clear();
 }
 
 /**
