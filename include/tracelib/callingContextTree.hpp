@@ -285,14 +285,14 @@ public:
      * @param name the name of the child
      * @return child node with specified name
      */
-    CCTNode<NodeData>* getChildOfCurrentNode(std::string& name);
+    CCTNode<NodeData>* getChildOfCurrentNode(const std::string& name);
 
     /**
      * @brief Creates a new node with specified name and adds it to the children of current node.
      * @param name the name of the new node
      * @return the nely created node
      */
-    CCTNode<NodeData>* addNewChildToCurrentNode(std::string& name);
+    CCTNode<NodeData>* addNewChildToCurrentNode(const std::string& name);
     //void removeNode(CCTNode<NodeData>* node);
 
     /**
@@ -770,13 +770,13 @@ CCTNode<NodeData>* CCTree<NodeData>::getParentOfCurrentNode() {
 }
 
 template<class NodeData>
-CCTNode<NodeData>* CCTree<NodeData>::getChildOfCurrentNode(std::string &name) {
+CCTNode<NodeData>* CCTree<NodeData>::getChildOfCurrentNode(const std::string &name) {
     auto it = this->currentNode->children.find(name);
     return it != this->currentNode->children.end() ? it->second.get() : nullptr;
 }
 
 template<class NodeData>
-CCTNode<NodeData>* CCTree<NodeData>::addNewChildToCurrentNode(std::string &name) {
+CCTNode<NodeData>* CCTree<NodeData>::addNewChildToCurrentNode(const std::string &name) {
     // Note: expactes that the node name does not exist in children yet
     if (this->currentNode == nullptr) {
         return nullptr;
