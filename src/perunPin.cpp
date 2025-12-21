@@ -205,9 +205,9 @@ void from_json(const nlohmann::json &j, PerunPinParser::Metadata &metadata) {
 }
 
 // NodeData
-void PerunPinNodeData::combine(Event *enterEvent, Event *exitEvent) {
-    auto* pinEnterEvent = static_cast<PerunPinEvent*>(enterEvent);
-    auto* pinExitEvent = static_cast<PerunPinEvent*>(exitEvent);
+void PerunPinNodeData::combine(std::unique_ptr<Event> &&enterEvent, std::unique_ptr<Event> &&exitEvent) {
+    auto* pinEnterEvent = static_cast<PerunPinEvent*>(enterEvent.get());
+    auto* pinExitEvent = static_cast<PerunPinEvent*>(exitEvent.get());
     const auto* enterData = pinEnterEvent->getData();
     const auto* exitData = pinExitEvent->getData();
 

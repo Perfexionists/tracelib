@@ -184,7 +184,7 @@ std::unique_ptr<Event> PerunSystemTapParser::getNextEvent() {
     return event;
 }
 
-void PerunSystemTapNodeData::combine(Event *enterEvent, Event *exitEvent) {
+void PerunSystemTapNodeData::combine(std::unique_ptr<Event> &&enterEvent, std::unique_ptr<Event> &&exitEvent) {
     const auto *enterData = static_cast<PerunSystemTapEventData *>(enterEvent->getData());
     const auto *exitData = static_cast<PerunSystemTapEventData *>(exitEvent->getData());
 

@@ -94,8 +94,8 @@ std::unique_ptr<Event> PerfFoldedParser::getNextEvent() {
 }
 
 // NodeData
-void PerfFoldedNodeData::combine(Event *enterEvent, Event *exitEvent) {
-    auto* event = static_cast<PerfFoldedEvent*>(enterEvent);
+void PerfFoldedNodeData::combine(std::unique_ptr<Event> &&enterEvent, std::unique_ptr<Event> &&exitEvent) {
+    auto* event = static_cast<PerfFoldedEvent*>(enterEvent.get());
     const PerfFoldedEventData* data = event->getData();
     this->samplesCnt = data->samples;
 }

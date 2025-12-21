@@ -17,7 +17,7 @@ public:
      * @param enterEvent enter event associated with the node this data is stored in
      * @param exitEvent exit event associated with the node this data is stored in
      */
-    virtual void combine(Event* enterEvent, Event* exitEvent = nullptr) = 0;
+    virtual void combine(std::unique_ptr<Even> && enterEvent, std::unique_ptr<Even> && exitEvent = nullptr) = 0;
 
     /**
      * @brief Retrieve a duration metric for the node this data is stored in. Usually time spent in the function.

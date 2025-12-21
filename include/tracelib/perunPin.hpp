@@ -243,7 +243,7 @@ public:
      * @param enterEvent enter event associated with the node this data is stored in
      * @param exitEvent exit event associated with the node this data is stored in
      */
-    void combine(Event* enterEvent, Event* exitEvent) override;
+    void combine(std::unique_ptr<Even> && enterEvent, std::unique_ptr<Even> && exitEvent) override;
 
     /**
      * @brief Retrieve a duration metric for the node this data is stored in.
