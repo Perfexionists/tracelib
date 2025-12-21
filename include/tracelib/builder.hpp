@@ -330,7 +330,7 @@ protected:
      * @param tree calling context tree that should be updated with the information from specified event
      * @param event the event to be handled
      */
-    virtual void handleStackSampleEvent(CCTree<NodeData> *tree, Event *event);
+    virtual void handleStackSampleEvent(CCTree<NodeData> *tree, std::unique_ptr<Event> &&event);
     /**
      * @brief Handles a stack sample event by storing the information in specified CCG.
      * This event does not have designated enter and exit, it is treated as enter event though.
@@ -340,7 +340,7 @@ protected:
      * @param graph connected call graph that should be updated with the information from specified event
      * @param event the event to be handled
      */
-    virtual void handleStackSampleEvent(CCGraph<NodeData> *graph, Event *event);
+    virtual void handleStackSampleEvent(CCGraph<NodeData> *graph, std::unique_ptr<Event> &&event);
 
     /**
      * @brief Handles a custom event. By defualt this function just skips the event.
@@ -350,7 +350,7 @@ protected:
      * @param tree calling context tree that should be updated with the information from specified event
      * @param event the event to be handled
      */
-    virtual void handleCustomEvent(CCTree<NodeData> *tree, Event *event);
+    virtual void handleCustomEvent(CCTree<NodeData> *tree, std::unique_ptr<Event> &&event);
     /**
      * @brief Handles a custom event. By defualt this function just skips the event.
      * It is meant to be overriden by the user if custom functionality is desired. The Disconnected Call Graph and
@@ -359,7 +359,7 @@ protected:
      * @param graph connected call graph that should be updated with the information from specified event
      * @param event the event to be handled
      */
-    virtual void handleCustomEvent(CCGraph<NodeData> *graph, Event *event);
+    virtual void handleCustomEvent(CCGraph<NodeData> *graph, std::unique_ptr<Event> &&event);
 
     /**
      * @brief An event handler that is called for every unprocessed event. It is called from processSkippedEvents.
@@ -830,7 +830,7 @@ void EventProcessor<Graph>::handleThreadExitEvent(CCGraph<NodeData> *graph, std:
 }
 
 template<IsSpecializedGraphType Graph>
-void EventProcessor<Graph>::handleStackSampleEvent(CCTree<NodeData> *tree, Event *event) {
+void EventProcessor<Graph>::handleStackSampleEvent(CCTree<NodeData> *tree, std::unique_ptr<Event> &&event) {
     tree->setCurrentNode(tree->getRootNode());
     for (auto functionName: event->stackSample) {
         auto* child = tree->getChildOfCurrentNode(functionName);
@@ -839,12 +839,11 @@ void EventProcessor<Graph>::handleStackSampleEvent(CCTree<NodeData> *tree, Event
         }
         tree->setCurrentNode(child);
     }
-    tree->getCurrentNode()->data->combine(event, nullptr);
-    delete event;
+    tree->getCurrentNode()->data->combine(std::forward<std::unique_ptr<Event>>(event), nullptr);
 }
 
 template<IsSpecializedGraphType Graph>
-void EventProcessor<Graph>::handleStackSampleEvent(CCGraph<NodeData> *graph, Event *event) {
+void EventProcessor<Graph>::handleStackSampleEvent(CCGraph<NodeData> *graph, std::unique_ptr<Event> &&event) {
     graph->setCurrentNode(graph->getRootNode());
     for (auto functionName: event->stackSample) {
         auto* child = graph->getChildOfCurrentNode(functionName);
@@ -860,12 +859,11 @@ void EventProcessor<Graph>::handleStackSampleEvent(CCGraph<NodeData> *graph, Eve
         }
         graph->setCurrentNode(child);
     }
-    graph->getCurrentNode()->data->combine(event, nullptr);
-    delete event;
+    graph->getCurrentNode()->data->combine(std::forward<std::unique_ptr<Event>>(event), nullptr);
 }
 
 template<IsSpecializedGraphType Graph>
-void EventProcessor<Graph>::handleCustomEvent(CCTree<NodeData> *tree, Event *event) {
+void EventProcessor<Graph>::handleCustomEvent(CCTree<NodeData> *tree, std::unique_ptr<Event> &&event) {
     // Note: User can reimplement this function in deriving class to handle any custom defined events.
     // All of the events with type that is not defined by default go through here
     // It is also adwised to reimplement the isClosingEvent and isStartingEvent functions of the event
@@ -873,11 +871,10 @@ void EventProcessor<Graph>::handleCustomEvent(CCTree<NodeData> *tree, Event *eve
     // If the event is not devided into starting and closing events, define it as a starting event.
 
     // Default implementation only deletes the event.
-    delete event;
 }
 
 template<IsSpecializedGraphType Graph>
-void EventProcessor<Graph>::handleCustomEvent(CCGraph<NodeData> *graph, Event *event) {
+void EventProcessor<Graph>::handleCustomEvent(CCGraph<NodeData> *graph, std::unique_ptr<Event> &&event) {
     // Note: User can reimplement this function in deriving class to handle any custom defined events.
     // All of the events with type that is not defined by default go through here
     // It is also adwised to reimplement the isClosingEvent and isStartingEvent functions of the event
@@ -885,7 +882,6 @@ void EventProcessor<Graph>::handleCustomEvent(CCGraph<NodeData> *graph, Event *e
     // If the event is not devided into starting and closing events, define it as a starting event.
 
     // Default implementation only deletes the event.
-    delete event;
 }
 
 template<IsSpecializedGraphType Graph>
