@@ -263,7 +263,7 @@ protected:
      * @param tree calling context tree that should be updated with the information from specified event
      * @param event the event to be handled
      */
-    virtual void handleProcessExitEvent(CCTree<NodeData> *tree, Event *event);
+    virtual void handleProcessExitEvent(CCTree<NodeData> *tree, std::unique_ptr<Event> &&event);
     /**
      * @brief Handles a process exit event by storing the information in specified CCG. These events are usually
      * desired to be present when multiple processes and threads are traced. By default they only maintain the
@@ -274,7 +274,7 @@ protected:
      * @param graph connected call graph that should be updated with the information from specified event
      * @param event the event to be handled
      */
-    virtual void handleProcessExitEvent(CCGraph<NodeData> *graph, Event *event);
+    virtual void handleProcessExitEvent(CCGraph<NodeData> *graph, std::unique_ptr<Event> &&event);
 
     /**
      * @brief Handles a thread enter event by storing the information in specified CCT. These events are usually
@@ -308,7 +308,7 @@ protected:
      * @param tree calling context tree that should be updated with the information from specified event
      * @param event the event to be handled
      */
-    virtual void handleThreadExitEvent(CCTree<NodeData> *tree, Event *event);
+    virtual void handleThreadExitEvent(CCTree<NodeData> *tree, std::unique_ptr<Event> &&event);
     /**
      * @brief Handles a thread exit event by storing the information in specified CCG. These events are usually
      * desired to be present when multiple processes and threads are traced. By default they only maintain the
@@ -319,7 +319,7 @@ protected:
      * @param graph connected call graph that should be updated with the information from specified event
      * @param event the event to be handled
      */
-    virtual void handleThreadExitEvent(CCGraph<NodeData> *graph, Event *event);
+    virtual void handleThreadExitEvent(CCGraph<NodeData> *graph, std::unique_ptr<Event> &&event);
 
     /**
      * @brief Handles a stack sample event by storing the information in specified CCT.
@@ -784,19 +784,17 @@ void EventProcessor<Graph>::handleProcessEnterEvent(CCGraph<NodeData> *graph, st
 }
 
 template<IsSpecializedGraphType Graph>
-void EventProcessor<Graph>::handleProcessExitEvent(CCTree<NodeData> *tree, Event *event) {
+void EventProcessor<Graph>::handleProcessExitEvent(CCTree<NodeData> *tree, std::unique_ptr<Event> &&event) {
     // Note: erasing the tid when building just a tree is not necessary, however calling erase
     // does nothing for empty map, thus it does not have to be checked.
     this->tidToProcessMap.erase(tree->tid);
-    delete event;
 }
 
 template<IsSpecializedGraphType Graph>
-void EventProcessor<Graph>::handleProcessExitEvent(CCGraph<NodeData> *graph, Event *event) {
+void EventProcessor<Graph>::handleProcessExitEvent(CCGraph<NodeData> *graph, std::unique_ptr<Event> &&event) {
     // Note: erasing the tid when building just a graph is not necessary, however calling erase
     // does nothing for empty map, thus it does not have to be checked.
     this->tidToProcessMap.erase(graph->tid);
-    delete event;
 }
 
 template<IsSpecializedGraphType Graph>
@@ -818,19 +816,17 @@ void EventProcessor<Graph>::handleThreadEnterEvent(CCGraph<NodeData> *graph, std
 }
 
 template<IsSpecializedGraphType Graph>
-void EventProcessor<Graph>::handleThreadExitEvent(CCTree<NodeData> *tree, Event *event) {
+void EventProcessor<Graph>::handleThreadExitEvent(CCTree<NodeData> *tree, std::unique_ptr<Event> &&event) {
     // Note: erasing the tid when building just a tree is not necessary, however calling erase
     // does nothing for empty map, thus it does not have to be checked.
     this->tidToProcessMap.erase(tree->tid);
-    delete event;
 }
 
 template<IsSpecializedGraphType Graph>
-void EventProcessor<Graph>::handleThreadExitEvent(CCGraph<NodeData> *graph, Event *event) {
+void EventProcessor<Graph>::handleThreadExitEvent(CCGraph<NodeData> *graph, std::unique_ptr<Event> &&event) {
     // Note: erasing the tid when building just a graph is not necessary, however calling erase
     // does nothing for empty map, thus it does not have to be checked.
     this->tidToProcessMap.erase(graph->tid);
-    delete event;
 }
 
 template<IsSpecializedGraphType Graph>
