@@ -99,7 +99,7 @@ public:
      * @param enterEvent enter event associated with the node this data is stored in
      * @param exitEvent exit event associated with the node this data is stored in
      */
-    void combine(std::unique_ptr<Even> && enterEvent, std::unique_ptr<Even> && exitEvent = nullptr) override;
+    void combine(std::unique_ptr<Event> &&enterEvent, std::unique_ptr<Event> &&exitEvent = nullptr) override;
 
     /**
      * @brief Retrieve a duration metric for the node this data is stored in. Here it is the invocation count.

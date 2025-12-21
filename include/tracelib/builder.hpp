@@ -581,7 +581,7 @@ void EventProcessor<Graph>::handleFunctionExitEvent(CCTree<NodeData> *tree, std:
         auto *backloggedEnterEvent = it->get();
         if (event->isComplementaryEvent(backloggedEnterEvent)) {
             foundTheEnterEventInBacklog = true;
-            tree->getCurrentNode()->data->combine(std::forward<std::unique_ptr<Event>>(backloggedEnterEvent), std::forward<std::unique_ptr<Event>>(event));
+            tree->getCurrentNode()->data->combine(std::forward<std::unique_ptr<Event>>(*it), std::forward<std::unique_ptr<Event>>(event));
             this->functionsBacklog.erase((it + 1).base());
             break;
         }
@@ -609,7 +609,7 @@ void EventProcessor<Graph>::handleFunctionExitEvent(CCGraph<NodeData> *graph, st
         auto *backloggedEnterEvent = it->get();
         if (event->isComplementaryEvent(backloggedEnterEvent)) {
             foundTheEnterEventInBacklog = true;
-            graph->getCurrentNode()->data->combine(std::forward<std::unique_ptr<Event>>(backloggedEnterEvent), std::forward<std::unique_ptr<Event>>(event));
+            graph->getCurrentNode()->data->combine(std::forward<std::unique_ptr<Event>>(*it), std::forward<std::unique_ptr<Event>>(event));
             this->functionsBacklog.erase((it + 1).base());
             break;
         }
