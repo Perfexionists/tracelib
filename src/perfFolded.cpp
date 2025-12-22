@@ -71,12 +71,7 @@ std::unique_ptr<Event> PerfFoldedParser::getNextEvent() {
     event->processName = stackSampleString.substr(0, pos);
     stackSampleString = stackSampleString.substr(pos+1) + ';';
 
-    if (auto it = this->processNameToProcessIdMap.find(event->processName); it != this->processNameToProcessIdMap.end()) {
-        event->pid = it->second;
-    } else {
-        event->pid = this->processIdCounter;
-        this->processNameToProcessIdMap.emplace(event->processName, this->processIdCounter++);
-    }
+    event->pid = processNameToProcessIdMap.try_emplace(event->processName, processNameToProcessIdMap.size() + 1).first->second;
 
     size_t start = 0;
     size_t end = 0;

@@ -56,11 +56,6 @@ public:
 class PerfFoldedParser final : public Parser {
 public:
     /**
-     * @brief Helper counter that creates cusom PIDs for the processes in the Perf Folded format since those are not
-     * explicitly specified in the format and are required by the builder of CCT/CCG structures.
-     */
-    int processIdCounter = 1;
-    /**
      * @brief Helper map to associate the created PID with the provided process name from the Perf Folded format
      */
     std::unordered_map<std::string, int> processNameToProcessIdMap;
