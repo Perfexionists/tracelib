@@ -33,15 +33,15 @@ public:
     using valueType = NodeData;
 
     /**
-     * @brief The node is identified by the function name.
+     * @brief The node is identified by the function id mapping to a name in the CCTree.
      * The name ".ROOT" is reserved for the auxiliary root of the CCT structure.
      */
-    std::string functionName = "";
+    size_t functionId;
 
     /**
      * @brief The node data should be an instance of class derived from NodeData class.
      */
-    std::unique_ptr<NodeData> data = nullptr;
+    std::unique_ptr<NodeData> data;
 
     /**
      * @brief The parent node of this node.
@@ -51,7 +51,7 @@ public:
     /**
      * @brief The children of this node in a map where the key is nodes function name.
      */
-    std::map<std::string, std::unique_ptr<CCTNode>> children = {};
+    std::unordered_map<size_t, std::unique_ptr<CCTNode>> children = {};
 
     /**
      * @brief Creates an empty node.
@@ -62,9 +62,9 @@ public:
      * @brief Creates a node with specified function name and optionally a parent pointer. The node
      * will have no children.
      * @param name the function name for the new node
-     * @param parent optional parent node of the node
+     * @param parent parent node of the node
      */
-    explicit CCTNode(const std::string& name, CCTNode* parent = nullptr);
+    explicit CCTNode(size_t id, CCTNode* parent);
 
     /**
      * @brief Destructor. Deallocates the node data and all its children.
@@ -75,7 +75,7 @@ public:
      * @brief Forms a string representation of the node.
      * @return string representation of the node
      */
-    std::string toString() const;
+    std::string toString(const std::string &name) const;
 
     /**
      * @brief Adds the specified child node to the children of this node.
@@ -84,45 +84,39 @@ public:
     void addChild(std::unique_ptr<CCTNode<NodeData>> &&child);
 
     /**
-     * @brief Removes the specified child node from the children of this node. The node is deallocated as well.
-     * @param child a child node
-     */
-    void removeChild(CCTNode<NodeData>* child);
-
-    /**
-     * @brief Removes the specified child node by its function name from the children of this node. The node
+     * @brief Removes the specified child node by its function id from the children of this node. The node
      * is deallocated as well.
-     * @param childName a child node function name
+     * @param childId a child node function id
      */
-    void removeChild(const std::string& childName);
+    void removeChild(size_t childId);
 
     /**
-     * @brief Returns the child node with the specified function name.
-     * @param childName a child node function name
-     * @return the child node with the specified function name
+     * @brief Returns the child node with the specified function id.
+     * @param childId a child node function id
+     * @return the child node with the specified function id
      */
-    CCTNode<NodeData>* getChild(const std::string& childName);
+    CCTNode<NodeData>* getChild(size_t childId);
 
     /**
-     * @brief Comparison of nodes that is checking only the function name and is allows missmatched NodeData types.
+     * @brief Comparison of nodes that is checking only the function id and is allows missmatched NodeData types.
      * @tparam U the type of the other node
      * @param other the other node
-     * @return true if the nodes ahve the same function name
+     * @return true if the nodes ahve the same function id
      */
     template <typename U>
     bool operator==(CCTNode<U>& other) {
-        return this->functionName == other.functionName;
+        return this->functionId == other.functionId;
     }
 
     /**
-     * @brief Comparison of nodes that is checking only the function name and is allows missmatched NodeData types.
+     * @brief Comparison of nodes that is checking only the function id and is allows missmatched NodeData types.
      * @tparam U the type of the other node
      * @param other the other node
-     * @return true if the nodes have different function names
+     * @return true if the nodes have different function ids
      */
     template <typename U>
     bool operator!=(CCTNode<U>& other) {
-        return this->functionName != other.functionName;
+        return this->functionId != other.functionId;
     }
 
 private:
@@ -136,7 +130,7 @@ private:
      */
     template<class Archive>
     void save(Archive & ar, const unsigned int version) const {
-        ar & BOOST_SERIALIZATION_NVP(functionName);
+        ar & BOOST_SERIALIZATION_NVP(functionId);
         ar & BOOST_SERIALIZATION_NVP(data);
         ar & BOOST_SERIALIZATION_NVP(children);
         // Doesn't serialize parent (handled by child relationship in the parent)
@@ -150,7 +144,7 @@ private:
      */
     template<class Archive>
     void load(Archive & ar, const unsigned int version) {
-        ar & BOOST_SERIALIZATION_NVP(functionName);
+        ar & BOOST_SERIALIZATION_NVP(functionId);
         ar & BOOST_SERIALIZATION_NVP(data);
         ar & BOOST_SERIALIZATION_NVP(children);
         // Fix parent pointers after loading children
@@ -162,50 +156,35 @@ private:
 };
 
 template<class NodeData>
-CCTNode<NodeData>::CCTNode(const std::string& name, CCTNode *parent) : functionName(name), parent(parent) {
-    this->data = std::make_unique<NodeData>();
+CCTNode<NodeData>::CCTNode(size_t id, CCTNode *parent) : functionId(id), parent(parent),
+                                                         data(std::make_unique<NodeData>()) {
 }
 
 template<class NodeData>
 CCTNode<NodeData>::~CCTNode() {
-    for (auto& [name, node] : this->children) {
-        node->parent = nullptr;
-    }
-    this->children.clear();
 }
 
 template<class NodeData>
-std::string CCTNode<NodeData>::toString() const {
+std::string CCTNode<NodeData>::toString(const std::string &name) const {
     std::stringstream sstream;
-    sstream << this->functionName;
+    sstream << name;
     return sstream.str();
 }
 
 template<class NodeData>
 void CCTNode<NodeData>::addChild(std::unique_ptr<CCTNode<NodeData>> &&child) {
     if (child != nullptr) {
-        this->children.emplace(child->functionName, std::forward<std::unique_ptr<CCTNode<NodeData>>>(child));
+        this->children.emplace(child->functionId, std::forward<std::unique_ptr<CCTNode<NodeData>>>(child));
     }
 }
 
 template<class NodeData>
-void CCTNode<NodeData>::removeChild(CCTNode<NodeData> *child) {
-    if (child == nullptr) {
-        return;
-    }
-    removeChild(child->functionName);
+void CCTNode<NodeData>::removeChild(size_t childId) {
+    this->children.erase(childId);
 }
 
 template<class NodeData>
-void CCTNode<NodeData>::removeChild(const std::string &childName) {
-    auto it = this->children.find(childName);
-    if (it != this->children.end()) {
-        this->children.erase(it);
-    }
-}
-
-template<class NodeData>
-CCTNode<NodeData> * CCTNode<NodeData>::getChild(const std::string &childName) {
+CCTNode<NodeData> * CCTNode<NodeData>::getChild(size_t childId) {
     auto it = this->children.find(childName);
     return it != this->children.end() ? it->second.get() : nullptr;
 }
