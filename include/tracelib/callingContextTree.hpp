@@ -19,6 +19,7 @@
 
 #include "utils.hpp"
 
+#define AUXILIARY_ROOT_ID 0
 #define AUXILIARY_ROOT_NAME ".ROOT"
 
 
@@ -64,7 +65,7 @@ public:
      * @param name the function name for the new node
      * @param parent parent node of the node
      */
-    explicit CCTNode(size_t id, CCTNode* parent);
+    explicit CCTNode(size_t id, CCTNode* parent = nullptr);
 
     /**
      * @brief Destructor. Deallocates the node data and all its children.
@@ -81,7 +82,7 @@ public:
      * @brief Adds the specified child node to the children of this node.
      * @param child a new child node
      */
-    void addChild(std::unique_ptr<CCTNode<NodeData>> &&child);
+    CCTNode<NodeData> *addChild(std::unique_ptr<CCTNode<NodeData>> &&child);
 
     /**
      * @brief Removes the specified child node by its function id from the children of this node. The node
@@ -172,10 +173,11 @@ std::string CCTNode<NodeData>::toString(const std::string &name) const {
 }
 
 template<class NodeData>
-void CCTNode<NodeData>::addChild(std::unique_ptr<CCTNode<NodeData>> &&child) {
-    if (child != nullptr) {
-        this->children.emplace(child->functionId, std::forward<std::unique_ptr<CCTNode<NodeData>>>(child));
+CCTNode<NodeData> *CCTNode<NodeData>::addChild(std::unique_ptr<CCTNode<NodeData>> &&child) {
+    if (child == nullptr) {
+        return nullptr;
     }
+    return this->children.emplace(child->functionId, std::forward<std::unique_ptr<CCTNode<NodeData>>>(child)).first->second.get();
 }
 
 template<class NodeData>
@@ -185,7 +187,7 @@ void CCTNode<NodeData>::removeChild(size_t childId) {
 
 template<class NodeData>
 CCTNode<NodeData> * CCTNode<NodeData>::getChild(size_t childId) {
-    auto it = this->children.find(childName);
+    auto it = this->children.find(childId);
     return it != this->children.end() ? it->second.get() : nullptr;
 }
 
@@ -202,7 +204,7 @@ private:
      * @brief The root node of the tree.
      * By default it is always an auxiliary root node with function name ".ROOT".
      */
-    std::unique_ptr<CCTNode<NodeData>> root = nullptr;
+    std::unique_ptr<CCTNode<NodeData>> root;
     /**
      * @brief The node which represents the currently "executed" function. The function call was encountered
      * and every event happening until a new function call or function returns is associated with this node.
@@ -210,7 +212,34 @@ private:
      */
     CCTNode<NodeData>* currentNode;
 
+    std::unordered_map<std::string, size_t> functionNameToIdMap;
+    std::vector<std::string> functionIdToNameMap;
+
+    std::pair<size_t, bool> functionNameToId(const std::string &name) const {
+        auto it = functionNameToIdMap.find(name);
+        if (it == functionNameToIdMap.end()) {
+            return {0, false};
+        }
+        auto [_, val] = *it;
+        return {val, true};
+    }
+    size_t functionNameToIdInsert(const std::string &name) {
+        auto [it, wasNew] = functionNameToIdMap.try_emplace(name, functionIdToNameMap.size());
+        if (wasNew) {
+            functionIdToNameMap.emplace_back(name);
+        }
+        auto [_, val] = *it;
+        return val;
+    }
+
 public:
+    std::pair<const std::string &, bool> functionIdToName(size_t id) const {
+        if (id >= functionIdToNameMap.size()) {
+            return {"", false};
+        }
+        return {functionIdToNameMap[id], true};
+    }
+
     using valueType = NodeData;
 
     /**
@@ -260,18 +289,18 @@ public:
     CCTNode<NodeData>* getParentOfCurrentNode();
 
     /**
-     * @brief Retrieves the child of the current node with the specified name.
-     * @param name the name of the child
-     * @return child node with specified name
+     * @brief Retrieves the child of the current node with the specified id.
+     * @param childId the id of the child
+     * @return child node with specified id
      */
-    CCTNode<NodeData>* getChildOfCurrentNode(const std::string& name);
+    CCTNode<NodeData>* getChildOfCurrentNode(const std::string &name);
 
     /**
-     * @brief Creates a new node with specified name and adds it to the children of current node.
-     * @param name the name of the new node
+     * @brief Creates a new node with specified id and adds it to the children of current node.
+     * @param childId the id of the new node
      * @return the nely created node
      */
-    CCTNode<NodeData>* addNewChildToCurrentNode(const std::string& name);
+    CCTNode<NodeData>* addNewChildToCurrentNode(const std::string &name);
     //void removeNode(CCTNode<NodeData>* node);
 
     /**
@@ -314,7 +343,7 @@ public:
 
     /**
      * @brief Comparison of trees that is checking the structure of the tree only. It uses the comparison of nodes
-     * and thus only compares their function names and not the data they hold. Hence, it is allowed to missmatched
+     * and thus only compares their function ids and not the data they hold. Hence, it is allowed to missmatched
      * NodeData types.
      * @tparam U the type of the data in nodes of the other tree
      * @param other the other tree
@@ -344,7 +373,7 @@ public:
 
     /**
      * @brief Comparison of trees that is checking the structure of the tree only. It uses the comparison of nodes
-     * and thus only compares their function names and not the data they hold. Hence, it is allowed to missmatched
+     * and thus only compares their function ids and not the data they hold. Hence, it is allowed to missmatched
      * NodeData types.
      * @tparam U the type of the data in nodes of the other tree
      * @param other the other tree
@@ -560,7 +589,7 @@ public:
             auto *node = this->queue.front();
             this->queue.pop_front();
             // Add children to the queue
-            for (auto& [name, child] : node->children) {
+            for (auto& [_, child] : node->children) {
                 this->queue.push_back(child.get());
             }
             // Update the current node
@@ -695,6 +724,8 @@ private:
         ar & BOOST_SERIALIZATION_NVP(processName);
         ar & BOOST_SERIALIZATION_NVP(pid);
         ar & BOOST_SERIALIZATION_NVP(tid);
+        ar & BOOST_SERIALIZATION_NVP(functionNameToIdMap);
+        ar & BOOST_SERIALIZATION_NVP(functionIdToNameMap);
     }
 
     /**
@@ -712,13 +743,16 @@ private:
         ar & BOOST_SERIALIZATION_NVP(processName);
         ar & BOOST_SERIALIZATION_NVP(pid);
         ar & BOOST_SERIALIZATION_NVP(tid);
+        ar & BOOST_SERIALIZATION_NVP(functionNameToIdMap);
+        ar & BOOST_SERIALIZATION_NVP(functionIdToNameMap);
     }
     BOOST_SERIALIZATION_SPLIT_MEMBER() // Allows to split default serialization function into save and load functions
 };
 
 template<class NodeData>
 CCTree<NodeData>::CCTree() {
-    this->root = std::make_unique<CCTNode<NodeData>>(AUXILIARY_ROOT_NAME);
+    this->root = std::make_unique<CCTNode<NodeData>>(AUXILIARY_ROOT_ID);
+    this->functionNameToIdInsert(AUXILIARY_ROOT_NAME);
     this->currentNode = root.get();
 }
 
@@ -750,19 +784,15 @@ CCTNode<NodeData>* CCTree<NodeData>::getParentOfCurrentNode() {
 
 template<class NodeData>
 CCTNode<NodeData>* CCTree<NodeData>::getChildOfCurrentNode(const std::string &name) {
-    auto it = this->currentNode->children.find(name);
-    return it != this->currentNode->children.end() ? it->second.get() : nullptr;
+    auto [fId, found] = this->functionNameToId(name);
+    return found ? this->currentNode->getChild(fId) : nullptr;
 }
 
 template<class NodeData>
 CCTNode<NodeData>* CCTree<NodeData>::addNewChildToCurrentNode(const std::string &name) {
     // Note: expactes that the node name does not exist in children yet
-    if (this->currentNode == nullptr) {
-        return nullptr;
-    }
-    auto newChildNode = std::make_unique<CCTNode<NodeData>>(name, this->currentNode);
-    const auto &functionName = newChildNode->functionName;
-    return this->currentNode->children.emplace(functionName, std::move(newChildNode)).first->second.get();
+    auto fId = this->functionNameToIdInsert(name);
+    return this->currentNode->addChild(std::make_unique<CCTNode<NodeData>>(fId, this->currentNode));
 }
 
 // template<class NodeData>
@@ -791,7 +821,7 @@ std::pair<int, std::vector<Operation<CCTNode<NodeData>>>> CCTree<NodeData>::tree
     // Edit operations cost definitions
     auto removeCost = [](CCTNode<NodeData>* n) { return 1; };
     auto insertCost = [](CCTNode<NodeData>* n) { return 1; };
-    auto updateCost = [](CCTNode<NodeData>* a, CCTNode<NodeData>* b) {return a->functionName == b->functionName ? 0 : 1;};
+    auto updateCost = [](CCTNode<NodeData>* a, CCTNode<NodeData>* b) {return a->functionId == b->functionId ? 0 : 1;};
 
 
     std::unique_ptr<TreeInfo> thisTreeInfo = this->getTreeInfo();
@@ -925,7 +955,7 @@ void CCTree<NodeData>::pruneSubtree(CCTNode<NodeData> *root, const long long int
 
     auto *parent = root->parent;
     if (parent != nullptr) {
-        parent->removeChild(root->functionName);
+        parent->removeChild(root->functionId);
     }
 }
 
@@ -991,7 +1021,11 @@ std::string CCTree<NodeData>::toString() const {
             continue;
         }
 
-        sstream << offset << currentNode->toString() << "\n";
+        const auto &[currentNodeName, found] = this->functionIdToName(currentNode->functionId);
+        if (!found) {
+            std::cerr << "[W]: Node's functionId has no name mapping!" << std::endl;
+        }
+        sstream << offset << currentNode->toString(currentNodeName) << "\n";
 
         stack.emplace(nullptr);
         offset += " | ";
@@ -1018,12 +1052,7 @@ long long CCTree<NodeData>::getNumberOfNodes() {
 
 template<class NodeData>
 long long CCTree<NodeData>::getNumberOfFunctions() {
-    std::unordered_set<std::string> uniqueFunctionNames = {};
-    for (auto it = this->levelOrderBegin(); it != this->levelOrderEnd(); ++it) {
-        CCTNode<NodeData>* node = *it;
-        uniqueFunctionNames.insert(node->functionName);
-    }
-    return uniqueFunctionNames.size();
+    return functionIdToNameMap.size();
 }
 
 template<class NodeData>
@@ -1334,10 +1363,9 @@ long long CCForest<NodeData>::getNumberOfNodes() {
 template<class NodeData>
 long long CCForest<NodeData>::getNumberOfFunctions() {
     std::unordered_set<std::string> uniqueFunctionNames = {};
-    for (auto&[id, tree] : forestMap) {
-        for (auto it = tree->levelOrderBegin(); it != tree->levelOrderEnd(); ++it) {
-            CCTNode<NodeData>* node = *it;
-            uniqueFunctionNames.insert(node->functionName);
+    for (const auto&[_, tree] : forestMap) {
+        for (const auto &name : tree->functionIdToNameMap) {
+            uniqueFunctionNames.insert(name);
         }
     }
     return uniqueFunctionNames.size();
