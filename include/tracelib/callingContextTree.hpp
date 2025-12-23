@@ -419,8 +419,8 @@ public:
             // Push children of current node on stack
             CCTNode<NodeData>* node = stack.top();
             stack.pop();
-            for (auto it = node->children.rbegin(); it != node->children.rend(); ++it) {
-                stack.push(it->second.get());
+            for (auto &[_, child] : node->children) {
+                stack.emplace(child.get());
             }
             // Update current node
             this->currentNode = stack.empty() ? nullptr : stack.top();
@@ -1029,8 +1029,8 @@ std::string CCTree<NodeData>::toString() const {
 
         stack.emplace(nullptr);
         offset += " | ";
-        for (auto it = currentNode->children.rbegin(); it != currentNode->children.rend(); ++it) {
-            stack.emplace(it->second.get());
+        for (auto &[_, child] : currentNode->children) {
+            stack.emplace(child.get());
         }
     }
     return sstream.str();
