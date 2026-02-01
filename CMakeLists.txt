@@ -7,7 +7,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-option(INCLUDE_PYTHON_BINDINGS "Include the python bindings in building and installation process." OFF)
 option(INCLUDE_EXAMPLE_PROGRAMS "Include the example programs in building process." OFF)
 
 # Directory structure
@@ -57,10 +56,6 @@ install(TARGETS ${PROJECT_NAME} # EXPORT tracelibConfig
     INCLUDES DESTINATION include
 )
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-
-if(INCLUDE_PYTHON_BINDINGS)
-    add_subdirectory(python-bindings)
-endif()
 
 if(INCLUDE_EXAMPLE_PROGRAMS)
     add_subdirectory(examples)

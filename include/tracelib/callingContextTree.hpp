@@ -99,6 +99,11 @@ public:
     CCTNode<NodeData>* getChild(size_t childId);
 
     /**
+     * @brief Merge other CCTNode into the current one.
+     */
+    void merge(const CCTNode<NodeData>& other);
+
+    /**
      * @brief Comparison of nodes that is checking only the function id and is allows missmatched NodeData types.
      * @tparam U the type of the other node
      * @param other the other node
@@ -191,6 +196,28 @@ CCTNode<NodeData> * CCTNode<NodeData>::getChild(size_t childId) {
     return it != this->children.end() ? it->second.get() : nullptr;
 }
 
+template<class NodeData>
+void CCTNode<NodeData>::merge(const CCTNode<NodeData> &other)
+{
+    // TODO if this nullptr. other places???
+    if (this->data != nullptr && other.data != nullptr) {
+        this->data->merge(*other.data);
+    }
+
+    // TODO Can do this with better complexity?
+    for (const auto &[name, node] : other.children) {
+        if (node == nullptr) {
+            continue;
+        }
+
+        if (auto child = this->children.find(name); child != this->children.end()) {
+            child->second->merge(*node);
+        } else {
+            addChild(node); // TODO TODO TODO can do this, then merge. remove data. BUT POINTER. WHERE IS DATA STORED?????????????
+        }
+    }
+}
+
 
 /**
  * @brief A class representing a Calling Context Tree (CCT).
@@ -280,6 +307,7 @@ public:
      * @brief Retrieves the root node of the tree.
      * @return root node
      */
+    const CCTNode<NodeData>* getRootNode() const;
     CCTNode<NodeData>* getRootNode();
 
     /**
@@ -309,6 +337,11 @@ public:
      */
     void prune(long long int threshold);
     std::pair<int, std::vector<Operation<CCTNode<NodeData>>>> treeEditDistance(CCTree<NodeData>& other);
+
+    /**
+     * @brief Merge other CCTree into the current one.
+     */
+    void merge(const CCTree<NodeData> &other);
 
     /**
      * @brief Form string representation of the tree.
@@ -778,6 +811,11 @@ CCTNode<NodeData> * CCTree<NodeData>::getRootNode() {
 }
 
 template<class NodeData>
+const CCTNode<NodeData> * CCTree<NodeData>::getRootNode() const {
+    return this->root;
+}
+
+template<class NodeData>
 CCTNode<NodeData>* CCTree<NodeData>::getParentOfCurrentNode() {
     return this->currentNode->parent;
 }
@@ -929,6 +967,22 @@ std::pair<int, std::vector<Operation<CCTNode<NodeData>>>> CCTree<NodeData>::tree
     }
 
     return {treeDistance.back().back(), operations.back().back()};
+}
+
+template<class NodeData>
+void CCTree<NodeData>::merge(const CCTree<NodeData> &other) {
+    if (this->processName != other.processName) {
+        std::cerr << "[W]: Merging CCTrees with different processName: " << this->processName << " vs " << other.processName << std::endl;
+    }
+    if (this->pid != other.pid) {
+        std::cerr << "[W]: Merging CCTrees with different pid: " << this->pid << " vs " << other.pid << std::endl;
+    }
+    if (this->tid != other.tid) {
+        std::cerr << "[W]: Merging CCTrees with different tid" << std::endl;
+    }
+
+    // TODO Ignoring currentNode
+    getRootNode()->merge(*other.getRootNode());
 }
 
 template<class NodeData>

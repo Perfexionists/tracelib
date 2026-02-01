@@ -3,7 +3,9 @@
 
 #include "tracelib/parser.hpp"
 
-Parser::Parser(const std::string& traceFilePath, const std::string& metadataFilePath) {
+Parser::Parser(const std::string& traceFilePath, const std::string& metadataFilePath,
+               std::ifstream::pos_type startPos, std::ifstream::pos_type endPos)
+               : endPos(endPos) {
     this->traceFilePath = traceFilePath;
     this->currentLine = "";
 
@@ -18,6 +20,8 @@ Parser::Parser(const std::string& traceFilePath, const std::string& metadataFile
     this->traceFile.open(this->traceFilePath);
     if (!this->traceFile.is_open()) {
         std::cerr << "[E]: Couldn't open file " << this->traceFilePath << "!" << std::endl;
+    } else {
+        this->traceFile.seekg(startPos);
     }
 }
 

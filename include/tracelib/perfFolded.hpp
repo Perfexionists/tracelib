@@ -60,7 +60,9 @@ public:
      */
     std::unordered_map<std::string, int> processNameToProcessIdMap;
 
-    explicit PerfFoldedParser (const std::string &traceFilePath, const std::string &metadataFilePath = "");
+    explicit PerfFoldedParser (const std::string &traceFilePath, const std::string &metadataFilePath = "",
+                               std::ifstream::pos_type startPos = 0,
+                               std::ifstream::pos_type endPos = std::ifstream::pos_type(-1));
 
     /**
      * @brief Parse metadata into json object. The perf folded format does not expect any metadata.
@@ -106,6 +108,8 @@ public:
      * @return invocation frequency of the node
      */
     long long int getInvocationFrequency() const override;
+
+    void merge(const PerfFoldedNodeData &other);
 
 private:
     friend class boost::serialization::access;

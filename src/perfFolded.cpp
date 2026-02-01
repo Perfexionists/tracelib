@@ -33,7 +33,9 @@ std::string PerfFoldedEvent::toString() {
 }
 
 // Parser
-PerfFoldedParser::PerfFoldedParser(const std::string &traceFilePath, const std::string& metadataFilePath) : Parser(traceFilePath, metadataFilePath){
+PerfFoldedParser::PerfFoldedParser(const std::string &traceFilePath, const std::string& metadataFilePath,
+                                   std::ifstream::pos_type startPos, std::ifstream::pos_type endPos)
+                                   : Parser(traceFilePath, metadataFilePath, startPos, endPos) {
 }
 
 void PerfFoldedParser::parseMetadata() {
@@ -41,6 +43,15 @@ void PerfFoldedParser::parseMetadata() {
 }
 
 std::unique_ptr<Event> PerfFoldedParser::getNextEvent() {
+    // Check if we reached the end position
+    if (this->endPos != std::ifstream::pos_type(-1)) {
+        auto currentPos = traceFile.tellg();
+        if (currentPos != std::ifstream::pos_type(-1) && endPos <= currentPos) {
+            this->currentLine = "";
+            return nullptr;
+        }
+    }
+
     // Retrieve a line from the file
     if (!std::getline(this->traceFile, this->currentLine)) {
         this->currentLine = "";
@@ -98,5 +109,9 @@ long long int PerfFoldedNodeData::getDuration() const {
 
 long long int PerfFoldedNodeData::getInvocationFrequency() const {
     return this->samplesCnt;
+}
+
+void PerfFoldedNodeData::merge(const PerfFoldedNodeData &other) {
+    this->samplesCnt += other.samplesCnt;
 }
 

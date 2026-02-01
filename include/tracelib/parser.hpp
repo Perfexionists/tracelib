@@ -18,13 +18,17 @@ protected:
     std::string metadataFilePath;
     std::ifstream metadataFile;
 
+    const std::ifstream::pos_type endPos;
+
 public:
     nlohmann::json metadataJson{};
 
     long long numberOfEvents = 0;
     long long numberOfFunctionCalls = 0;
 
-    explicit Parser(const std::string& traceFilePath, const std::string& metadataFilePath = "");
+    explicit Parser(const std::string& traceFilePath, const std::string& metadataFilePath = "",
+                    std::ifstream::pos_type startPos = 0,
+                    std::ifstream::pos_type endPos = std::ifstream::pos_type(-1));
     virtual ~Parser();
 
     // Prevent duplication of the parser
