@@ -22,6 +22,8 @@
 #define AUXILIARY_ROOT_ID 0
 #define AUXILIARY_ROOT_NAME ".ROOT"
 
+template <class NodeData>
+class CCTree;
 
 /**
  * @brief A class representing a node in Calling Context Tree (CCT) structure.
@@ -104,6 +106,11 @@ public:
     void merge(std::unique_ptr<CCTNode<NodeData>>&& other);
 
     /**
+     * @brief Recursively remap node's (and its children's) function id from the current map, into new tree's map.
+     */
+    void remapFunctionId(const std::vector<std::string> &oldMap, CCTree<NodeData> &newTree);
+
+    /**
      * @brief Comparison of nodes that is checking only the function id and is allows missmatched NodeData types.
      * @tparam U the type of the other node
      * @param other the other node
@@ -179,10 +186,9 @@ std::string CCTNode<NodeData>::toString(const std::string &name) const {
 
 template<class NodeData>
 CCTNode<NodeData> *CCTNode<NodeData>::addChild(std::unique_ptr<CCTNode<NodeData>> &&child) {
-    if (child == nullptr) {
-        return nullptr;
-    }
-    return this->children.emplace(child->functionId, std::forward<std::unique_ptr<CCTNode<NodeData>>>(child)).first->second.get();
+    auto ret = this->children.emplace(child->functionId, std::forward<std::unique_ptr<CCTNode<NodeData>>>(child)).first->second.get();
+    ret->parent = this;
+    return ret;
 }
 
 template<class NodeData>
@@ -199,23 +205,28 @@ CCTNode<NodeData> * CCTNode<NodeData>::getChild(size_t childId) {
 template<class NodeData>
 void CCTNode<NodeData>::merge(std::unique_ptr<CCTNode<NodeData>> &&other)
 {
-    // TODO if this nullptr. other places???
-    if (this->data != nullptr && other->data != nullptr) {
-        this->data->merge(*(other->data));
+    if (other->data != nullptr) {
+        if (this->data == nullptr) {
+            this->data = std::forward<std::unique_ptr<NodeData>>(other->data);
+        } else {
+            this->data->merge(std::forward<std::unique_ptr<NodeData>>(other->data));
+        }
+        other->data = nullptr;
     }
 
-    // TODO Can do this with better complexity?
-    for (auto &[name, node] : other->children) {
+    for (auto &[_, node] : other->children) {
         if (node == nullptr) {
             continue;
         }
 
-        if (auto child = this->children.find(name); child != this->children.end()) {
-            child->second->merge(std::move(node));
+        if (auto child = this->children.find(node->functionId); child != this->children.end()) {
+            child->second->merge(std::forward<std::unique_ptr<CCTNode<NodeData>>>(node));
         } else {
-            addChild(std::move(node)); // TODO TODO TODO can do this, then merge. remove data. BUT POINTER. WHERE IS DATA STORED?????????????
+            addChild(std::forward<std::unique_ptr<CCTNode<NodeData>>>(node));
         }
+        node = nullptr;
     }
+    other = nullptr;
 }
 
 
@@ -250,6 +261,8 @@ private:
         auto [_, val] = *it;
         return {val, true};
     }
+
+public:
     size_t functionNameToIdInsert(const std::string &name) {
         auto [it, wasNew] = functionNameToIdMap.try_emplace(name, functionIdToNameMap.size());
         if (wasNew) {
@@ -259,7 +272,6 @@ private:
         return val;
     }
 
-public:
     std::pair<const std::string &, bool> functionIdToName(size_t id) const {
         if (id >= functionIdToNameMap.size()) {
             return {"", false};
@@ -983,9 +995,9 @@ void CCTree<NodeData>::merge(CCTree<NodeData> &&other) {
         std::cerr << "[W]: Merging CCTrees with different tid" << std::endl;
     }
 
-    // TODO Ignoring currentNode
-    getRootNode()->merge(std::move(other.root));
-    other.root = nullptr;
+    other.root->remapFunctionId(other.functionIdToNameMap, *this);
+
+    getRootNode()->merge(std::forward<std::unique_ptr<CCTNode<NodeData>>>(other.root));
 }
 
 template<class NodeData>
@@ -1125,6 +1137,23 @@ long long CCTree<NodeData>::getMaximumInvocations() {
     return max;
 }
 
+
+template<class NodeData>
+void CCTNode<NodeData>::remapFunctionId(const std::vector<std::string> &oldMap, CCTree<NodeData> &newTree) {
+    if (this->functionId >= oldMap.size()) {
+        std::cerr << "[E]: Function id " << this->functionId << " of CCTNode not found in tree's map!" << std::endl;
+        return;
+    }
+    this->functionId = newTree.functionNameToIdInsert(oldMap[this->functionId]);
+
+    auto oldChildren{std::forward<std::unordered_map<size_t, std::unique_ptr<CCTNode>>>(this->children)};
+    this->children.clear();
+    for (auto &&[_, child] : oldChildren) {
+        child->remapFunctionId(oldMap, newTree);
+        this->addChild(std::forward<std::unique_ptr<CCTNode<NodeData>>>(child));
+        child = nullptr;
+    }
+}
 
 // CCForest
 template <class NodeData>

@@ -14,7 +14,7 @@ PerfFoldedEvent::PerfFoldedEvent(const Type type, const std::string &name,
                                  const std::string &processName,
                                  const int tid, const int pid, const int ppid,
                                  std::unique_ptr<PerfFoldedEventData> &&data) :
-Event(type, name, processName, tid, pid, ppid), data(std::move(data)){
+Event(type, name, processName, tid, pid, ppid), data(std::forward<std::unique_ptr<PerfFoldedEventData>>(data)){
 
 }
 
@@ -61,7 +61,7 @@ std::unique_ptr<Event> PerfFoldedParser::getNextEvent() {
         return nullptr;
     }
     if (this->currentLine.empty() or this->currentLine.find_first_not_of(" \t\n\v\f\r") == std::string::npos) {
-        return std::move(this->getNextEvent());
+        return std::forward<std::unique_ptr<Event>>(this->getNextEvent());
     }
     this->numberOfEvents++;
 
@@ -114,7 +114,7 @@ long long int PerfFoldedNodeData::getInvocationFrequency() const {
     return this->samplesCnt;
 }
 
-void PerfFoldedNodeData::merge(const PerfFoldedNodeData &other) {
-    this->samplesCnt += other.samplesCnt;
+void PerfFoldedNodeData::merge(std::unique_ptr<PerfFoldedNodeData> &&other) {
+    this->samplesCnt += other->samplesCnt;
 }
 
