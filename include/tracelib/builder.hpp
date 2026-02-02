@@ -1215,7 +1215,7 @@ CCTree<PerfFoldedNodeData> buildParCCT(const std::string &traceFilePath, int thr
 
     CCTree<PerfFoldedNodeData> tree;
     for (int i = 0; i < threadCount; ++i) {
-        tree.merge(trees[i]);
+        tree.merge(std::move(trees[i]));
     }
 
     return tree;

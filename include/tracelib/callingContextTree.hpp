@@ -101,7 +101,7 @@ public:
     /**
      * @brief Merge other CCTNode into the current one.
      */
-    void merge(const CCTNode<NodeData>& other);
+    void merge(std::unique_ptr<CCTNode<NodeData>>&& other);
 
     /**
      * @brief Comparison of nodes that is checking only the function id and is allows missmatched NodeData types.
@@ -197,23 +197,23 @@ CCTNode<NodeData> * CCTNode<NodeData>::getChild(size_t childId) {
 }
 
 template<class NodeData>
-void CCTNode<NodeData>::merge(const CCTNode<NodeData> &other)
+void CCTNode<NodeData>::merge(std::unique_ptr<CCTNode<NodeData>> &&other)
 {
     // TODO if this nullptr. other places???
-    if (this->data != nullptr && other.data != nullptr) {
-        this->data->merge(*other.data);
+    if (this->data != nullptr && other->data != nullptr) {
+        this->data->merge(*(other->data));
     }
 
     // TODO Can do this with better complexity?
-    for (const auto &[name, node] : other.children) {
+    for (auto &[name, node] : other->children) {
         if (node == nullptr) {
             continue;
         }
 
         if (auto child = this->children.find(name); child != this->children.end()) {
-            child->second->merge(*node);
+            child->second->merge(std::move(node));
         } else {
-            addChild(node); // TODO TODO TODO can do this, then merge. remove data. BUT POINTER. WHERE IS DATA STORED?????????????
+            addChild(std::move(node)); // TODO TODO TODO can do this, then merge. remove data. BUT POINTER. WHERE IS DATA STORED?????????????
         }
     }
 }
@@ -292,6 +292,8 @@ public:
      */
     ~CCTree();
 
+    CCTree(CCTree &&) = default;
+
     /**
      * @brief Retrieves the current node.
      * @return current node
@@ -341,7 +343,7 @@ public:
     /**
      * @brief Merge other CCTree into the current one.
      */
-    void merge(const CCTree<NodeData> &other);
+    void merge(CCTree<NodeData> &&other);
 
     /**
      * @brief Form string representation of the tree.
@@ -812,7 +814,7 @@ CCTNode<NodeData> * CCTree<NodeData>::getRootNode() {
 
 template<class NodeData>
 const CCTNode<NodeData> * CCTree<NodeData>::getRootNode() const {
-    return this->root;
+    return this->root.get();
 }
 
 template<class NodeData>
@@ -970,7 +972,7 @@ std::pair<int, std::vector<Operation<CCTNode<NodeData>>>> CCTree<NodeData>::tree
 }
 
 template<class NodeData>
-void CCTree<NodeData>::merge(const CCTree<NodeData> &other) {
+void CCTree<NodeData>::merge(CCTree<NodeData> &&other) {
     if (this->processName != other.processName) {
         std::cerr << "[W]: Merging CCTrees with different processName: " << this->processName << " vs " << other.processName << std::endl;
     }
@@ -982,7 +984,8 @@ void CCTree<NodeData>::merge(const CCTree<NodeData> &other) {
     }
 
     // TODO Ignoring currentNode
-    getRootNode()->merge(*other.getRootNode());
+    getRootNode()->merge(std::move(other.root));
+    other.root = nullptr;
 }
 
 template<class NodeData>
