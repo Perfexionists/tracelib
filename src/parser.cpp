@@ -21,7 +21,10 @@ Parser::Parser(const std::string& traceFilePath, const std::string& metadataFile
     if (!this->traceFile.is_open()) {
         std::cerr << "[E]: Couldn't open file " << this->traceFilePath << "!" << std::endl;
     } else {
-        this->traceFile.seekg(startPos);
+        if (std::ifstream::pos_type(0) != startPos) {
+            this->traceFile.seekg(startPos - std::ifstream::pos_type(1));
+            this->traceFile.get(this->charBeforeStart);
+        }
     }
 }
 

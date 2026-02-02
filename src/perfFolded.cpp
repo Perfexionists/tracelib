@@ -36,6 +36,9 @@ std::string PerfFoldedEvent::toString() {
 PerfFoldedParser::PerfFoldedParser(const std::string &traceFilePath, const std::string& metadataFilePath,
                                    std::ifstream::pos_type startPos, std::ifstream::pos_type endPos)
                                    : Parser(traceFilePath, metadataFilePath, startPos, endPos) {
+    if (this->charBeforeStart != '\n') {
+        this->traceFile.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    }
 }
 
 void PerfFoldedParser::parseMetadata() {

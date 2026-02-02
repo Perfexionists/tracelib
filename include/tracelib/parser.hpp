@@ -19,6 +19,7 @@ protected:
     std::ifstream metadataFile;
 
     const std::ifstream::pos_type endPos;
+    char charBeforeStart = '\n';
 
 public:
     nlohmann::json metadataJson{};
