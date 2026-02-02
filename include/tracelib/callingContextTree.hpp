@@ -985,18 +985,7 @@ std::pair<int, std::vector<Operation<CCTNode<NodeData>>>> CCTree<NodeData>::tree
 
 template<class NodeData>
 void CCTree<NodeData>::merge(CCTree<NodeData> &&other) {
-    if (this->processName != other.processName) {
-        std::cerr << "[W]: Merging CCTrees with different processName: " << this->processName << " vs " << other.processName << std::endl;
-    }
-    if (this->pid != other.pid) {
-        std::cerr << "[W]: Merging CCTrees with different pid: " << this->pid << " vs " << other.pid << std::endl;
-    }
-    if (this->tid != other.tid) {
-        std::cerr << "[W]: Merging CCTrees with different tid" << std::endl;
-    }
-
     other.root->remapFunctionId(other.functionIdToNameMap, *this);
-
     getRootNode()->merge(std::forward<std::unique_ptr<CCTNode<NodeData>>>(other.root));
 }
 

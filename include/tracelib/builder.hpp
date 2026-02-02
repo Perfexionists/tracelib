@@ -1188,34 +1188,34 @@ static void parBuild(const std::string &traceFilePath,
 CCTree<PerfFoldedNodeData> buildParCCT(const std::string &traceFilePath, int threadCount) {
     auto fileSize = gFileSize(traceFilePath);
 
-    // TODO Dont use dynamic array
-    CCTree<PerfFoldedNodeData> trees[threadCount];
-    std::thread threads[threadCount];
+    std::vector<CCTree<PerfFoldedNodeData>> trees(threadCount);
+    std::vector<std::thread> threads;
     for (int i = 0; i < threadCount; ++i) {
-        threads[i] = std::thread(parBuild, traceFilePath,
-                            (fileSize * i) / threadCount, (fileSize * (i + 1)) / threadCount,
-                            &trees[i]);
+        threads.emplace_back(parBuild, traceFilePath, (fileSize * i) / threadCount,
+                             (fileSize * (i + 1)) / threadCount, &trees[i]);
     }
 
-    // TODO Dont busywait
-    bool allJoinable;
-    do {
-        allJoinable = true;
-        for (int i = 0; i < threadCount; ++i) {
-            if (!threads[i].joinable()) {
-                allJoinable = false;
-                break;
-            }
+    for (auto &thread : threads) {
+        if (thread.joinable()) {
+            thread.join();
         }
-    } while (!allJoinable);
-
-    for (int i = 0; i < threadCount; ++i) {
-        threads[i].join();
     }
+    threads.clear();
 
     std::cout << "Threads joined. Merging..." << std::endl;
-    for (int i = 1; i < threadCount; ++i) {
-        trees[0].merge(std::move(trees[i]));
+    for (int jump = 1; jump < threadCount; jump *= 2) {
+        for (int i = 0; i < threadCount; i += 2 * jump) {
+            threads.emplace_back([&trees, i, jump] {
+                trees[i].merge(std::move(trees[i + jump]));
+            });
+        }
+
+        for (auto &thread : threads) {
+            if (thread.joinable()) {
+                thread.join();
+            }
+        }
+        threads.clear();
     }
 
     return std::move(trees[0]);
