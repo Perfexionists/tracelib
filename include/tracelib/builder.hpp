@@ -1214,12 +1214,11 @@ CCTree<PerfFoldedNodeData> buildParCCT(const std::string &traceFilePath, int thr
     }
 
     std::cout << "Threads joined. Merging..." << std::endl;
-    CCTree<PerfFoldedNodeData> tree;
-    for (int i = 0; i < threadCount; ++i) {
-        tree.merge(std::move(trees[i]));
+    for (int i = 1; i < threadCount; ++i) {
+        trees[0].merge(std::move(trees[i]));
     }
 
-    return tree;
+    return std::move(trees[0]);
 }
 
 #endif //BUILDER_HPP
