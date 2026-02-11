@@ -1,5 +1,6 @@
 #include <iostream>
 #include <sstream>
+#include <charconv>
 
 #include "tracelib/event.hpp"
 #include "tracelib/perfFolded.hpp"
@@ -49,7 +50,7 @@ std::unique_ptr<Event> PerfFoldedParser::getNextEvent() {
     // Check if we reached the end position
     if (this->endPos != std::ifstream::pos_type(-1)) {
         auto currentPos = traceFile.tellg();
-        if (currentPos != std::ifstream::pos_type(-1) && endPos <= currentPos) {
+        if (endPos <= currentPos && currentPos != std::ifstream::pos_type(-1)) {
             this->currentLine = "";
             return nullptr;
         }
@@ -60,10 +61,10 @@ std::unique_ptr<Event> PerfFoldedParser::getNextEvent() {
         this->currentLine = "";
         return nullptr;
     }
-    if (this->currentLine.empty() or this->currentLine.find_first_not_of(" \t\n\v\f\r") == std::string::npos) {
+    if (this->currentLine.find_first_not_of(" \t\n\v\f\r") == std::string::npos) {
         return std::forward<std::unique_ptr<Event>>(this->getNextEvent());
     }
-    this->numberOfEvents++;
+    ++this->numberOfEvents;
 
     // Parse the line
     size_t pos;
@@ -71,9 +72,15 @@ std::unique_ptr<Event> PerfFoldedParser::getNextEvent() {
         std::cerr << "[E]: Unexpected format of trace file!" << std::endl;
         exit(1);
     }
+    unsigned long long sampleCnt;
+    auto res = std::from_chars(this->currentLine.data() + pos + 1,
+                               this->currentLine.data() + this->currentLine.size(),
+                               sampleCnt);
+    if (res.ec != std::errc{} || res.ptr != this->currentLine.data() + this->currentLine.size()) {
+        std::cerr << "[E]: Unexpected format of trace file!" << std::endl;
+        exit(1);
+    }
     std::string stackSampleString = this->currentLine.substr(0, pos); // TODO stringviews here
-    const std::string sampleCntString = this->currentLine.substr(pos+1);
-    const long long int sampleCnt = std::stoll(sampleCntString);
 
     if ( (pos = stackSampleString.find(';')) == std::string::npos ) {
         std::cerr << "[E]: Unexpected format of trace file!" << std::endl;
