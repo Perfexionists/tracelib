@@ -13,7 +13,7 @@ class Parser {
 protected:
     std::string traceFilePath;
     std::ifstream traceFile;
-    std::string currentLine;
+    std::string *currentLine = nullptr;
 
     std::string metadataFilePath;
     std::ifstream metadataFile;
@@ -78,7 +78,7 @@ public:
      * If getNextEvent was not called for the current trace file it is set to empty string.
      * @return original line from trace file as a string corresponding to the last event created
      */
-    std::string getCurrentOriginalLine();
+    std::string *getCurrentOriginalLine();
 };
 
 #endif // PARSER_HPP

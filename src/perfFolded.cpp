@@ -51,36 +51,38 @@ std::unique_ptr<Event> PerfFoldedParser::getNextEvent() {
     if (this->endPos != std::ifstream::pos_type(-1)) {
         auto currentPos = traceFile.tellg();
         if (endPos <= currentPos && currentPos != std::ifstream::pos_type(-1)) {
-            this->currentLine = "";
+            this->currentLine = nullptr;
             return nullptr;
         }
     }
 
     // Retrieve a line from the file
-    if (!std::getline(this->traceFile, this->currentLine)) {
-        this->currentLine = "";
+    std::string currentLine;
+    if (!std::getline(this->traceFile, currentLine)) {
+        this->currentLine = nullptr;
         return nullptr;
     }
-    if (this->currentLine.find_first_not_of(" \t\n\v\f\r") == std::string::npos) {
+    this->currentLine = &currentLine;
+    if (currentLine.find_first_not_of(" \t\n\v\f\r") == std::string::npos) {
         return std::forward<std::unique_ptr<Event>>(this->getNextEvent());
     }
     ++this->numberOfEvents;
 
     // Parse the line
     size_t pos;
-    if ( (pos = this->currentLine.find(' ')) == std::string::npos ) {
+    if ( (pos = currentLine.find(' ')) == std::string::npos ) {
         std::cerr << "[E]: Unexpected format of trace file!" << std::endl;
         exit(1);
     }
     unsigned long long sampleCnt;
-    auto res = std::from_chars(this->currentLine.data() + pos + 1,
-                               this->currentLine.data() + this->currentLine.size(),
+    auto res = std::from_chars(currentLine.data() + pos + 1,
+                               currentLine.data() + currentLine.size(),
                                sampleCnt);
-    if (res.ec != std::errc{} || res.ptr != this->currentLine.data() + this->currentLine.size()) {
+    if (res.ec != std::errc{} || res.ptr != currentLine.data() + currentLine.size()) {
         std::cerr << "[E]: Unexpected format of trace file!" << std::endl;
         exit(1);
     }
-    std::string stackSampleString = this->currentLine.substr(0, pos); // TODO stringviews here
+    std::string stackSampleString = currentLine.substr(0, pos); // TODO stringviews here
 
     if ( (pos = stackSampleString.find(';')) == std::string::npos ) {
         std::cerr << "[E]: Unexpected format of trace file!" << std::endl;

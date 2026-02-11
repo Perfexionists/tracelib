@@ -7,7 +7,7 @@ Parser::Parser(const std::string& traceFilePath, const std::string& metadataFile
                std::ifstream::pos_type startPos, std::ifstream::pos_type endPos)
                : endPos(endPos) {
     this->traceFilePath = traceFilePath;
-    this->currentLine = "";
+    this->currentLine = nullptr;
 
     this->metadataFilePath = metadataFilePath;
     if (!this->metadataFilePath.empty()) {
@@ -51,7 +51,7 @@ void Parser::parseMetadata() {
 void Parser::setTraceFile(const std::string& filePath) {
     this->traceFile.close();
     this->traceFilePath = filePath;
-    this->currentLine = "";
+    this->currentLine = nullptr;
 
     this->traceFile.open(this->traceFilePath);
     if (!this->traceFile.is_open()) {
@@ -79,6 +79,6 @@ std::string Parser::getMetadataFile() {
     return this->metadataFilePath;
 }
 
-std::string Parser::getCurrentOriginalLine() {
+std::string *Parser::getCurrentOriginalLine() {
     return this->currentLine;
 }
