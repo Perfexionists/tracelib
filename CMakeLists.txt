@@ -25,7 +25,7 @@ find_package(nlohmann_json REQUIRED)
 
 # Add library target
 add_library(${PROJECT_NAME} SHARED)
-target_compile_options(${PROJECT_NAME} PRIVATE -g -Wno-unused-parameter -flto=auto)
+target_compile_options(${PROJECT_NAME} PRIVATE -Wno-unused-parameter -flto=auto -g -Wall -Wextra -O2 -fno-omit-frame-pointer -fno-optimize-sibling-calls)
 target_sources(${PROJECT_NAME} PRIVATE
     ${SRC_DIR}/event.cpp
     ${SRC_DIR}/parser.cpp
