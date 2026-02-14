@@ -27,9 +27,9 @@ public:
  */
 class PerfFoldedEvent final : public Event {
 public:
-    std::unique_ptr<PerfFoldedEventData> data;
-
     const std::string line;
+
+    std::unique_ptr<PerfFoldedEventData> data;
 
     PerfFoldedEvent(Type type, std::string &&line, const std::string& name,
                     const std::string& processName = "",

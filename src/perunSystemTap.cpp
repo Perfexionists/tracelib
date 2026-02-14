@@ -55,7 +55,7 @@ std::unique_ptr<Event> PerunSystemTapParser::getNextEvent() {
     }
     this->currentLine = &currentLine;
     if (currentLine.empty() or currentLine.find_first_not_of(" \t\n\v\f\r") == std::string::npos) {
-        return std::move(this->getNextEvent());
+        return this->getNextEvent();
     }
     this->numberOfEvents++;
 
@@ -175,7 +175,7 @@ std::unique_ptr<Event> PerunSystemTapParser::getNextEvent() {
             break;
         case CORRUPT:
             // Skips the corrupt event
-            return std::move(this->getNextEvent());
+            return this->getNextEvent();
         default:
             std::cerr << "[E]: Unexpected format of trace file!" << std::endl;
             exit(1);

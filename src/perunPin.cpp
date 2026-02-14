@@ -55,7 +55,7 @@ std::unique_ptr<Event> PerunPinParser::getNextEvent() {
     }
     this->currentLine = &currentLine;
     if (currentLine.empty() or currentLine.find_first_not_of(" \t\n\v\f\r") == std::string::npos) {
-        return std::move(this->getNextEvent());
+        return this->getNextEvent();
     }
     this->numberOfEvents++;
 
@@ -162,7 +162,7 @@ std::unique_ptr<Event> PerunPinParser::getNextEvent() {
 
     auto event = std::make_unique<PerunPinEvent>(eventType, functionName, "", tid, pid, -1, data);
     event->id = id;
-    return std::move(event);
+    return event;
 }
 
 void from_json(const nlohmann::json &j, PerunPinParser::Location &location) {
