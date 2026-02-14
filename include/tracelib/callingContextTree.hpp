@@ -22,6 +22,8 @@
 #define AUXILIARY_ROOT_ID 0
 #define AUXILIARY_ROOT_NAME ".ROOT"
 
+using functionIdType = uint32_t;
+
 template <class NodeData>
 class CCTree;
 
@@ -39,7 +41,7 @@ public:
      * @brief The node is identified by the function id mapping to a name in the CCTree.
      * The name ".ROOT" is reserved for the auxiliary root of the CCT structure.
      */
-    size_t functionId;
+    functionIdType functionId;
 
     /**
      * @brief The node data should be an instance of class derived from NodeData class.
@@ -54,7 +56,7 @@ public:
     /**
      * @brief The children of this node in a map where the key is nodes function name.
      */
-    std::unordered_map<size_t, std::unique_ptr<CCTNode>> children = {};
+    std::unordered_map<functionIdType, std::unique_ptr<CCTNode>> children = {};
 
     /**
      * @brief Creates an empty node.
@@ -67,7 +69,7 @@ public:
      * @param name the function name for the new node
      * @param parent parent node of the node
      */
-    explicit CCTNode(size_t id, CCTNode* parent = nullptr);
+    explicit CCTNode(functionIdType id, CCTNode* parent = nullptr);
 
     /**
      * @brief Destructor. Deallocates the node data and all its children.
@@ -91,21 +93,21 @@ public:
      * is deallocated as well.
      * @param childId a child node function id
      */
-    void removeChild(size_t childId);
+    void removeChild(functionIdType childId);
 
     /**
      * @brief Returns the child node with the specified function id.
      * @param childId a child node function id
      * @return the child node with the specified function id
      */
-    CCTNode<NodeData>* getChild(size_t childId);
+    CCTNode<NodeData>* getChild(functionIdType childId);
 
     /**
      * @brief Returns the child node with the specified function id, insert new if not found.
      * @param childId a child node function id
      * @return the child node with the specified function id
      */
-    CCTNode<NodeData>* getChildInsert(size_t childId);
+    CCTNode<NodeData>* getChildInsert(functionIdType childId);
 
     /**
      * @brief Merge other CCTNode into the current one.
@@ -176,7 +178,7 @@ private:
 };
 
 template<class NodeData>
-CCTNode<NodeData>::CCTNode(size_t id, CCTNode *parent) : functionId(id), parent(parent),
+CCTNode<NodeData>::CCTNode(functionIdType id, CCTNode *parent) : functionId(id), parent(parent),
                                                          data(std::make_unique<NodeData>()) {
 }
 
@@ -199,18 +201,18 @@ CCTNode<NodeData> *CCTNode<NodeData>::addChild(std::unique_ptr<CCTNode<NodeData>
 }
 
 template<class NodeData>
-void CCTNode<NodeData>::removeChild(size_t childId) {
+void CCTNode<NodeData>::removeChild(functionIdType childId) {
     this->children.erase(childId);
 }
 
 template<class NodeData>
-CCTNode<NodeData> * CCTNode<NodeData>::getChild(size_t childId) {
+CCTNode<NodeData> * CCTNode<NodeData>::getChild(functionIdType childId) {
     auto it = this->children.find(childId);
     return it != this->children.end() ? it->second.get() : nullptr;
 }
 
 template<class NodeData>
-CCTNode<NodeData> *CCTNode<NodeData>::getChildInsert(size_t childId) {
+CCTNode<NodeData> *CCTNode<NodeData>::getChildInsert(functionIdType childId) {
     if (auto child = this->children.find(childId); child != this->children.end()) {
         return child->second.get();
     }
@@ -271,10 +273,10 @@ private:
             return std::hash<std::string_view>{}(sv);
         }
     };
-    std::unordered_map<std::string, size_t, TransparentStringHash, std::equal_to<>> functionNameToIdMap;
+    std::unordered_map<std::string, functionIdType, TransparentStringHash, std::equal_to<>> functionNameToIdMap;
     std::vector<std::string> functionIdToNameMap;
 
-    std::pair<size_t, bool> functionNameToId(const std::string &name) const {
+    std::pair<functionIdType, bool> functionNameToId(const std::string &name) const {
         auto it = functionNameToIdMap.find(name);
         if (it == functionNameToIdMap.end()) {
             return {0, false};
@@ -282,7 +284,7 @@ private:
         auto [_, val] = *it;
         return {val, true};
     }
-    std::pair<size_t, bool> functionNameToId(std::string_view name) const {
+    std::pair<functionIdType, bool> functionNameToId(std::string_view name) const {
         auto it = functionNameToIdMap.find(name);
         if (it == functionNameToIdMap.end()) {
             return {0, false};
@@ -292,7 +294,7 @@ private:
     }
 
 public:
-    size_t functionNameToIdInsert(const std::string &name) {
+    functionIdType functionNameToIdInsert(const std::string &name) {
         auto [it, wasNew] = functionNameToIdMap.try_emplace(name, functionIdToNameMap.size());
         if (wasNew) {
             functionIdToNameMap.emplace_back(name);
@@ -300,7 +302,7 @@ public:
         auto [_, val] = *it;
         return val;
     }
-    size_t functionNameToIdInsert(std::string_view name) {
+    functionIdType functionNameToIdInsert(std::string_view name) {
         if (auto search = functionNameToIdMap.find(name); search != functionNameToIdMap.end()) {
             return search->second;
         }
@@ -309,7 +311,7 @@ public:
         return it->second;
     }
 
-    const std::string *functionIdToName(size_t id) const {
+    const std::string *functionIdToName(functionIdType id) const {
         return (id < functionIdToNameMap.size()) ? &functionIdToNameMap[id] : nullptr;
     }
 
@@ -1175,7 +1177,7 @@ void CCTNode<NodeData>::remapFunctionId(const std::vector<std::string> &oldMap, 
     }
     this->functionId = newTree.functionNameToIdInsert(oldMap[this->functionId]);
 
-    auto oldChildren{std::forward<std::unordered_map<size_t, std::unique_ptr<CCTNode>>>(this->children)};
+    auto oldChildren{std::forward<std::unordered_map<functionIdType, std::unique_ptr<CCTNode>>>(this->children)};
     this->children.clear();
     for (auto &&[_, child] : oldChildren) {
         child->remapFunctionId(oldMap, newTree);
