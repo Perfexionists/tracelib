@@ -532,12 +532,8 @@ void EventProcessor<Graph>::handleFunctionEnterEvent(CCTree<NodeData> *tree, std
 
     // Search for the called function in the children of
     // the function node that represents the caller.
-    auto child = tree->getChildOfCurrentNode(name);
-    if (child == nullptr) {
-        // Function was not called in this context yet. Create a new node
-        // and change the currently running node to the newly called node.
-        child = tree->addNewChildToCurrentNode(name);
-    }
+    auto fId = tree->functionNameToIdInsert(name);
+    auto child = tree->getCurrentNode()->getChildInsert(fId);
     tree->setCurrentNode(child);
     child = nullptr;
 }
@@ -590,7 +586,7 @@ void EventProcessor<Graph>::handleFunctionExitEvent(CCTree<NodeData> *tree, std:
         std::cerr << "[W]: Could not find funcion entering event at function exit."
                 "Could not update the data in node!" << std::endl;
     }
-    tree->setCurrentNode(tree->getParentOfCurrentNode());
+    tree->setCurrentNode(tree->getCurrentNode()->parent);
     event = nullptr;
 }
 
@@ -676,7 +672,10 @@ void EventProcessor<Graph>::handleBasicBlockExitEvent(CCTree<NodeData> *tree, st
                 // The function exited sooner than the last basic block
                 // TODO: this won't handle recursive calls
                 // needs to check also if the last event before this was function exit
-                nodeToUpdate = tree->getChildOfCurrentNode(event->name);
+                auto [fId, wasFound] = tree->functionNameToId(event->name);
+                if (wasFound) {
+                    nodeToUpdate = nodeToUpdate->getChild(fId);
+                }
                 // Note: If node was not found even with adjustment. It is likely that the function was not recognized at the RTN
                 // granularity and was not gathered. Thus, this basic block does not have a parent function and is skipped.
             }

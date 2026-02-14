@@ -263,6 +263,7 @@ private:
     std::unordered_map<std::string, functionIdType, TransparentStringHash, std::equal_to<>> functionNameToIdMap;
     std::vector<std::string> functionIdToNameMap;
 
+public:
     std::pair<functionIdType, bool> functionNameToId(const std::string &name) const {
         auto it = functionNameToIdMap.find(name);
         if (it == functionNameToIdMap.end()) {
@@ -280,7 +281,6 @@ private:
         return {val, true};
     }
 
-public:
     functionIdType functionNameToIdInsert(const std::string &name) {
         auto [it, wasNew] = functionNameToIdMap.try_emplace(name, functionIdToNameMap.size());
         if (wasNew) {
@@ -346,20 +346,6 @@ public:
      */
     const CCTNode<NodeData>* getRootNode() const;
     CCTNode<NodeData>* getRootNode();
-
-    /**
-     * @brief Retrieves the parent of the current node.
-     * @return parent node of current node
-     */
-    CCTNode<NodeData>* getParentOfCurrentNode();
-
-    /**
-     * @brief Retrieves the child of the current node with the specified id.
-     * @param childId the id of the child
-     * @return child node with specified id
-     */
-    CCTNode<NodeData>* getChildOfCurrentNode(const std::string &name);
-    CCTNode<NodeData>* getChildOfCurrentNode(std::string_view name);
 
     /**
      * @brief Creates a new node with specified id and adds it to the children of current node.
@@ -851,22 +837,6 @@ CCTNode<NodeData> * CCTree<NodeData>::getRootNode() {
 template<class NodeData>
 const CCTNode<NodeData> * CCTree<NodeData>::getRootNode() const {
     return this->root.get();
-}
-
-template<class NodeData>
-CCTNode<NodeData>* CCTree<NodeData>::getParentOfCurrentNode() {
-    return this->currentNode->parent;
-}
-
-template<class NodeData>
-CCTNode<NodeData>* CCTree<NodeData>::getChildOfCurrentNode(const std::string &name) {
-    auto [fId, found] = this->functionNameToId(name);
-    return found ? this->currentNode->getChild(fId) : nullptr;
-}
-template<class NodeData>
-CCTNode<NodeData>* CCTree<NodeData>::getChildOfCurrentNode(std::string_view name) {
-    auto [fId, found] = this->functionNameToId(name);
-    return found ? this->currentNode->getChild(fId) : nullptr;
 }
 
 template<class NodeData>
