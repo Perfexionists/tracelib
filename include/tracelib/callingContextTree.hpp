@@ -348,14 +348,6 @@ public:
     CCTNode<NodeData>* getRootNode();
 
     /**
-     * @brief Creates a new node with specified id and adds it to the children of current node.
-     * @param childId the id of the new node
-     * @return the nely created node
-     */
-    CCTNode<NodeData>* addNewChildToCurrentNode(const std::string &name);
-    //void removeNode(CCTNode<NodeData>* node);
-
-    /**
      * @brief Prunes the tree starting from leaves based on the specified threshold.
      * @param threshold the threshold value of occurrence frequency for functions in their contexts
      */
@@ -838,19 +830,6 @@ template<class NodeData>
 const CCTNode<NodeData> * CCTree<NodeData>::getRootNode() const {
     return this->root.get();
 }
-
-template<class NodeData>
-CCTNode<NodeData>* CCTree<NodeData>::addNewChildToCurrentNode(const std::string &name) {
-    // Note: expactes that the node name does not exist in children yet
-    auto fId = this->functionNameToIdInsert(name);
-    return this->currentNode->addChild(std::make_unique<CCTNode<NodeData>>(fId, this->currentNode));
-}
-
-// template<class NodeData>
-// void CCTree<NodeData>::removeNode(CCTNode<NodeData>* node) {
-//     auto parent = node->parent;
-//     parent->children.erase(node);
-// }
 
 template<class NodeData>
 void CCTree<NodeData>::prune(const long long int threshold) {
