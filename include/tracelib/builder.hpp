@@ -1202,7 +1202,7 @@ CCTree<PerfFoldedNodeData> buildParCCT(const std::string &traceFilePath, int thr
 
     std::cout << "Threads joined. Merging..." << std::endl;
     for (int jump = 1; jump < threadCount; jump *= 2) {
-        for (int i = 0; i < threadCount; i += 2 * jump) {
+        for (int i = 0; i + jump < threadCount; i += 2 * jump) {
             threads.emplace_back([&trees, i, jump] {
                 trees[i].merge(std::move(trees[i + jump]));
             });
