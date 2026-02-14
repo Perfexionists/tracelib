@@ -671,11 +671,11 @@ void EventProcessor<Graph>::handleBasicBlockExitEvent(CCTree<NodeData> *tree, st
             foundTheEnterEventInBacklog = true;
             auto *nodeToUpdate = tree->getCurrentNode();
 
-            const auto &[toUpdateName, found] = tree->functionIdToName(nodeToUpdate->functionId);
-            if (!found) {
+            const auto toUpdateName = tree->functionIdToName(nodeToUpdate->functionId);
+            if (toUpdateName == nullptr) {
                 std::cerr << "[W]: Node's functionId has no name mapping!" << std::endl;
             }
-            if (toUpdateName != event->name) {
+            if (*toUpdateName != event->name) {
                 // The function exited sooner than the last basic block
                 // TODO: this won't handle recursive calls
                 // needs to check also if the last event before this was function exit
@@ -828,10 +828,8 @@ template<IsSpecializedGraphType Graph>
 void EventProcessor<Graph>::handleStackSampleEvent(CCTree<NodeData> *tree, std::unique_ptr<Event> &&event) {
     tree->setCurrentNode(tree->getRootNode());
     for (auto functionName: event->stackSample) {
-        auto* child = tree->getChildOfCurrentNode(functionName);
-        if (child == nullptr) {
-            child = tree->addNewChildToCurrentNode(functionName);
-        }
+        auto fId = tree->functionNameToIdInsert(functionName);
+        auto *child = tree->tryAddNewChildToCurrentNode(fId);
         tree->setCurrentNode(child);
     }
     tree->getCurrentNode()->data->combine(std::forward<std::unique_ptr<Event>>(event), nullptr);
@@ -841,14 +839,14 @@ template<IsSpecializedGraphType Graph>
 void EventProcessor<Graph>::handleStackSampleEvent(CCGraph<NodeData> *graph, std::unique_ptr<Event> &&event) {
     graph->setCurrentNode(graph->getRootNode());
     for (auto functionName: event->stackSample) {
-        auto* child = graph->getChildOfCurrentNode(functionName);
+        auto* child = graph->getChildOfCurrentNode(std::string(functionName)); // TODO Unnecessary string_view -> string
         if (child == nullptr) {
             // Function was not called from this caller yet. Search all the nodes
             // and if node representing this function exists (if it does not, create it)
             // and add it to the children of current node
-            child = graph->getNode(functionName);
+            child = graph->getNode(std::string(functionName)); // TODO Unnecessary string_view -> string
             if (child == nullptr) { // Node with this name does not exist yet
-                child = graph->addNewNode(functionName);
+                child = graph->addNewNode(std::string(functionName)); // TODO Unnecessary string_view -> string
             }
             child = graph->addChildToCurrentNode(child);
         }
@@ -1133,11 +1131,11 @@ void Builder<Graph>::serializeCCTreeToPerfFoldedFormat(std::ostream &outputStrea
         }
         std::stack<std::string> stack;
         for (auto it = tree.pathToRootBegin(node); it != tree.pathToRootEnd(); ++it) {
-            const auto &[name, found] = tree.functionIdToName(it->functionId);
-            if (!found) {
+            const auto name = tree.functionIdToName(it->functionId);
+            if (name == nullptr) {
                 std::cerr << "[W]: Node's functionId has no name mapping!" << std::endl;
             }
-            stack.emplace(name);
+            stack.emplace(*name);
         }
         if (!tree.processName.empty()) {
             stack.push(tree.processName);

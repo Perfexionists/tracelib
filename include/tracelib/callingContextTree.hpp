@@ -250,10 +250,24 @@ private:
      */
     CCTNode<NodeData>* currentNode;
 
-    std::unordered_map<std::string, size_t> functionNameToIdMap;
+    struct TransparentStringHash {
+        using is_transparent = void;
+        size_t operator()(std::string_view sv) const noexcept {
+            return std::hash<std::string_view>{}(sv);
+        }
+    };
+    std::unordered_map<std::string, size_t, TransparentStringHash, std::equal_to<>> functionNameToIdMap;
     std::vector<std::string> functionIdToNameMap;
 
     std::pair<size_t, bool> functionNameToId(const std::string &name) const {
+        auto it = functionNameToIdMap.find(name);
+        if (it == functionNameToIdMap.end()) {
+            return {0, false};
+        }
+        auto [_, val] = *it;
+        return {val, true};
+    }
+    std::pair<size_t, bool> functionNameToId(std::string_view name) const {
         auto it = functionNameToIdMap.find(name);
         if (it == functionNameToIdMap.end()) {
             return {0, false};
@@ -271,12 +285,18 @@ public:
         auto [_, val] = *it;
         return val;
     }
-
-    std::pair<const std::string &, bool> functionIdToName(size_t id) const {
-        if (id >= functionIdToNameMap.size()) {
-            return {"", false};
+    size_t functionNameToIdInsert(std::string_view name) {
+        // TODO Make abstraction for try_emplace
+        if (auto search = functionNameToIdMap.find(name); search != functionNameToIdMap.end()) {
+            return search->second;
         }
-        return {functionIdToNameMap[id], true};
+        auto [it, _] = functionNameToIdMap.emplace(std::string(name), functionIdToNameMap.size());
+        functionIdToNameMap.emplace_back(name);
+        return it->second;
+    }
+
+    const std::string *functionIdToName(size_t id) const {
+        return (id < functionIdToNameMap.size()) ? &functionIdToNameMap[id] : nullptr;
     }
 
     using valueType = NodeData;
@@ -336,6 +356,7 @@ public:
      * @return child node with specified id
      */
     CCTNode<NodeData>* getChildOfCurrentNode(const std::string &name);
+    CCTNode<NodeData>* getChildOfCurrentNode(std::string_view name);
 
     /**
      * @brief Creates a new node with specified id and adds it to the children of current node.
@@ -344,6 +365,13 @@ public:
      */
     CCTNode<NodeData>* addNewChildToCurrentNode(const std::string &name);
     //void removeNode(CCTNode<NodeData>* node);
+
+    /**
+     * @brief Returns current node's child with id, create a new node if it doesn't exist.
+     * @param childId the id of the new node
+     * @return the possibly created node
+     */
+    CCTNode<NodeData> *tryAddNewChildToCurrentNode(size_t childId);
 
     /**
      * @brief Prunes the tree starting from leaves based on the specified threshold.
@@ -799,7 +827,7 @@ private:
 template<class NodeData>
 CCTree<NodeData>::CCTree() {
     this->root = std::make_unique<CCTNode<NodeData>>(AUXILIARY_ROOT_ID);
-    this->functionNameToIdInsert(AUXILIARY_ROOT_NAME);
+    this->functionNameToIdInsert(std::string{AUXILIARY_ROOT_NAME});
     this->currentNode = root.get();
 }
 
@@ -839,12 +867,25 @@ CCTNode<NodeData>* CCTree<NodeData>::getChildOfCurrentNode(const std::string &na
     auto [fId, found] = this->functionNameToId(name);
     return found ? this->currentNode->getChild(fId) : nullptr;
 }
+template<class NodeData>
+CCTNode<NodeData>* CCTree<NodeData>::getChildOfCurrentNode(std::string_view name) {
+    auto [fId, found] = this->functionNameToId(name);
+    return found ? this->currentNode->getChild(fId) : nullptr;
+}
 
 template<class NodeData>
 CCTNode<NodeData>* CCTree<NodeData>::addNewChildToCurrentNode(const std::string &name) {
     // Note: expactes that the node name does not exist in children yet
     auto fId = this->functionNameToIdInsert(name);
     return this->currentNode->addChild(std::make_unique<CCTNode<NodeData>>(fId, this->currentNode));
+}
+
+template<class NodeData>
+CCTNode<NodeData> *CCTree<NodeData>::tryAddNewChildToCurrentNode(size_t childId) {
+    if (auto child = this->currentNode->children.find(childId); child != this->currentNode->children.end()) {
+        return child->second.get();
+    }
+    return this->currentNode->children.emplace(childId, std::make_unique<CCTNode<NodeData>>(childId, this->currentNode)).first->second.get();
 }
 
 // template<class NodeData>
@@ -1079,11 +1120,11 @@ std::string CCTree<NodeData>::toString() const {
             continue;
         }
 
-        const auto &[currentNodeName, found] = this->functionIdToName(currentNode->functionId);
-        if (!found) {
+        const auto currentNodeName = this->functionIdToName(currentNode->functionId);
+        if (currentNodeName == nullptr) {
             std::cerr << "[W]: Node's functionId has no name mapping!" << std::endl;
         }
-        sstream << offset << currentNode->toString(currentNodeName) << "\n";
+        sstream << offset << currentNode->toString(*currentNodeName) << "\n";
 
         stack.emplace(nullptr);
         offset += " | ";

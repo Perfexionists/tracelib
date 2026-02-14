@@ -82,25 +82,31 @@ std::unique_ptr<Event> PerfFoldedParser::getNextEvent() {
         std::cerr << "[E]: Unexpected format of trace file!" << std::endl;
         exit(1);
     }
-    std::string stackSampleString = currentLine.substr(0, pos); // TODO stringviews here
+    auto stackSampleSV = (std::string_view{currentLine}).substr(0, pos);
 
-    if ( (pos = stackSampleString.find(';')) == std::string::npos ) {
+    if ( (pos = stackSampleSV.find(';')) == std::string_view::npos ) {
         std::cerr << "[E]: Unexpected format of trace file!" << std::endl;
         exit(1);
     }
     auto event = std::make_unique<PerfFoldedEvent>(Event::STACK_SAMPLE, std::move(currentLine), "");
     event->data = std::make_unique<PerfFoldedEventData>(sampleCnt);
 
-    event->processName = stackSampleString.substr(0, pos);
-    stackSampleString = stackSampleString.substr(pos+1) + ';';
+    event->processName = stackSampleSV.substr(0, pos);
+    stackSampleSV = stackSampleSV.substr(pos + 1);
 
     event->pid = processNameToProcessIdMap.try_emplace(event->processName, processNameToProcessIdMap.size() + 1).first->second;
 
-    size_t start = 0;
-    size_t end = 0;
-    while ( (end = stackSampleString.find(';', start)) != std::string::npos ) {
-        event->stackSample.push_back(stackSampleString.substr(start, end-start));
-        start = end + 1;
+    while ((pos = stackSampleSV.find(';')) != std::string_view::npos) {
+        event->stackSample.push_back(stackSampleSV.substr(0, pos));
+        stackSampleSV = stackSampleSV.substr(pos + 1);
+    }
+    if (!stackSampleSV.empty()) {
+        event->stackSample.push_back(stackSampleSV);
+    }
+
+    if (event->stackSample.empty()) {
+        std::cerr << "[E]: Unexpected format of trace file!" << std::endl;
+        exit(1);
     }
     event->name = event->stackSample.back();
 

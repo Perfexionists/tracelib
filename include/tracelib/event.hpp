@@ -51,7 +51,7 @@ public:
      * @brief Function names in the order as observed on stack sample. This is mandatory only if
      * the event type is STACK_SAMPLE.
      */
-    std::vector<std::string> stackSample = {};
+    std::vector<std::string_view> stackSample = {};
     /**
      * @brief Name of the process this event is associated with.
      */
