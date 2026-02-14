@@ -671,11 +671,8 @@ void EventProcessor<Graph>::handleBasicBlockExitEvent(CCTree<NodeData> *tree, st
             foundTheEnterEventInBacklog = true;
             auto *nodeToUpdate = tree->getCurrentNode();
 
-            const auto toUpdateName = tree->functionIdToName(nodeToUpdate->functionId);
-            if (toUpdateName == nullptr) {
-                std::cerr << "[W]: Node's functionId has no name mapping!" << std::endl;
-            }
-            if (*toUpdateName != event->name) {
+            const auto &toUpdateName = tree->functionIdToName(nodeToUpdate->functionId);
+            if (toUpdateName != event->name) {
                 // The function exited sooner than the last basic block
                 // TODO: this won't handle recursive calls
                 // needs to check also if the last event before this was function exit
@@ -1131,11 +1128,8 @@ void Builder<Graph>::serializeCCTreeToPerfFoldedFormat(std::ostream &outputStrea
         }
         std::stack<std::string> stack;
         for (auto it = tree.pathToRootBegin(node); it != tree.pathToRootEnd(); ++it) {
-            const auto name = tree.functionIdToName(it->functionId);
-            if (name == nullptr) {
-                std::cerr << "[W]: Node's functionId has no name mapping!" << std::endl;
-            }
-            stack.emplace(*name);
+            const auto &name = tree.functionIdToName(it->functionId);
+            stack.emplace(name);
         }
         if (!tree.processName.empty()) {
             stack.push(tree.processName);

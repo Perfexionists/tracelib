@@ -77,12 +77,6 @@ public:
     ~CCTNode();
 
     /**
-     * @brief Forms a string representation of the node.
-     * @return string representation of the node
-     */
-    std::string toString(const std::string &name) const;
-
-    /**
      * @brief Adds the specified child node to the children of this node.
      * @param child a new child node
      */
@@ -184,13 +178,6 @@ CCTNode<NodeData>::CCTNode(functionIdType id, CCTNode *parent) : functionId(id),
 
 template<class NodeData>
 CCTNode<NodeData>::~CCTNode() {
-}
-
-template<class NodeData>
-std::string CCTNode<NodeData>::toString(const std::string &name) const {
-    std::stringstream sstream;
-    sstream << name;
-    return sstream.str();
 }
 
 template<class NodeData>
@@ -311,8 +298,8 @@ public:
         return it->second;
     }
 
-    const std::string *functionIdToName(functionIdType id) const {
-        return (id < functionIdToNameMap.size()) ? &functionIdToNameMap[id] : nullptr;
+    const std::string &functionIdToName(functionIdType id) const {
+        return functionIdToNameMap.at(id);
     }
 
     using valueType = NodeData;
@@ -1121,11 +1108,7 @@ std::string CCTree<NodeData>::toString() const {
             continue;
         }
 
-        const auto currentNodeName = this->functionIdToName(currentNode->functionId);
-        if (currentNodeName == nullptr) {
-            std::cerr << "[W]: Node's functionId has no name mapping!" << std::endl;
-        }
-        sstream << offset << currentNode->toString(*currentNodeName) << "\n";
+        sstream << offset << this->functionIdToName(currentNode->functionId) << "\n";
 
         stack.emplace(nullptr);
         offset += " | ";
