@@ -829,7 +829,7 @@ void EventProcessor<Graph>::handleStackSampleEvent(CCTree<NodeData> *tree, std::
     tree->setCurrentNode(tree->getRootNode());
     for (auto functionName: event->stackSample) {
         auto fId = tree->functionNameToIdInsert(functionName);
-        auto *child = tree->tryAddNewChildToCurrentNode(fId);
+        auto *child = tree->getCurrentNode()->getChildInsert(fId);
         tree->setCurrentNode(child);
     }
     tree->getCurrentNode()->data->combine(std::forward<std::unique_ptr<Event>>(event), nullptr);

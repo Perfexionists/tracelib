@@ -101,6 +101,13 @@ public:
     CCTNode<NodeData>* getChild(size_t childId);
 
     /**
+     * @brief Returns the child node with the specified function id, insert new if not found.
+     * @param childId a child node function id
+     * @return the child node with the specified function id
+     */
+    CCTNode<NodeData>* getChildInsert(size_t childId);
+
+    /**
      * @brief Merge other CCTNode into the current one.
      */
     void merge(std::unique_ptr<CCTNode<NodeData>>&& other);
@@ -203,6 +210,14 @@ CCTNode<NodeData> * CCTNode<NodeData>::getChild(size_t childId) {
 }
 
 template<class NodeData>
+CCTNode<NodeData> *CCTNode<NodeData>::getChildInsert(size_t childId) {
+    if (auto child = this->children.find(childId); child != this->children.end()) {
+        return child->second.get();
+    }
+    return this->children.emplace(childId, std::make_unique<CCTNode<NodeData>>(childId, this)).first->second.get();
+}
+
+template<class NodeData>
 void CCTNode<NodeData>::merge(std::unique_ptr<CCTNode<NodeData>> &&other)
 {
     if (other->data != nullptr) {
@@ -286,7 +301,6 @@ public:
         return val;
     }
     size_t functionNameToIdInsert(std::string_view name) {
-        // TODO Make abstraction for try_emplace
         if (auto search = functionNameToIdMap.find(name); search != functionNameToIdMap.end()) {
             return search->second;
         }
@@ -365,13 +379,6 @@ public:
      */
     CCTNode<NodeData>* addNewChildToCurrentNode(const std::string &name);
     //void removeNode(CCTNode<NodeData>* node);
-
-    /**
-     * @brief Returns current node's child with id, create a new node if it doesn't exist.
-     * @param childId the id of the new node
-     * @return the possibly created node
-     */
-    CCTNode<NodeData> *tryAddNewChildToCurrentNode(size_t childId);
 
     /**
      * @brief Prunes the tree starting from leaves based on the specified threshold.
@@ -878,14 +885,6 @@ CCTNode<NodeData>* CCTree<NodeData>::addNewChildToCurrentNode(const std::string 
     // Note: expactes that the node name does not exist in children yet
     auto fId = this->functionNameToIdInsert(name);
     return this->currentNode->addChild(std::make_unique<CCTNode<NodeData>>(fId, this->currentNode));
-}
-
-template<class NodeData>
-CCTNode<NodeData> *CCTree<NodeData>::tryAddNewChildToCurrentNode(size_t childId) {
-    if (auto child = this->currentNode->children.find(childId); child != this->currentNode->children.end()) {
-        return child->second.get();
-    }
-    return this->currentNode->children.emplace(childId, std::make_unique<CCTNode<NodeData>>(childId, this->currentNode)).first->second.get();
 }
 
 // template<class NodeData>
