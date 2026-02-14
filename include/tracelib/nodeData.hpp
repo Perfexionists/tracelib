@@ -7,10 +7,10 @@
 /**
  * @brief Base class for data stored in nodes of Calling Context Tree and Connected Call Graph.
  */
-class NodeData {
+class NodeDataBase {
 public:
-    NodeData() = default;
-    virtual ~NodeData() = default;
+    NodeDataBase() = default;
+    virtual ~NodeDataBase() = default;
 
     /**
      * @brief Combines data from enter end exit events and stores them in the derivedl class from this class. The

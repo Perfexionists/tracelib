@@ -116,7 +116,7 @@ public:
 /**
  * @brief Implementation of the NodeData class. Used to store data within the CCT/CCG structures.
  */
-class PerunSystemTapNodeData final : public NodeData {
+class PerunSystemTapNodeData final : public NodeDataBase {
 public:
     /**
      * @brief Durations of events calculated from their timestamps.

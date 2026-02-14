@@ -84,7 +84,7 @@ public:
 /**
  * @brief Implementation of the NodeData class. Used to store data within the CCT/CCG structures.
  */
-class PerfFoldedNodeData final : public NodeData {
+class PerfFoldedNodeData final : public NodeDataBase {
 public:
     long long int samplesCnt = 0;
 
