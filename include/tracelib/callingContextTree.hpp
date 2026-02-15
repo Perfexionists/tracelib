@@ -101,7 +101,7 @@ public:
      * @param childId a child node function id
      * @return the child node with the specified function id
      */
-    CCTNode<NodeData>* tryEmplaceChild(functionIdType childId);
+    std::pair<CCTNode<NodeData> *, bool> tryEmplaceChild(functionIdType childId);
 
     /**
      * @brief Merge other CCTNode into the current one.
@@ -199,11 +199,11 @@ CCTNode<NodeData> * CCTNode<NodeData>::findChild(functionIdType childId) {
 }
 
 template<class NodeData>
-CCTNode<NodeData> *CCTNode<NodeData>::tryEmplaceChild(functionIdType childId) {
+std::pair<CCTNode<NodeData> *, bool> CCTNode<NodeData>::tryEmplaceChild(functionIdType childId) {
     if (auto child = this->children.find(childId); child != this->children.end()) {
-        return child->second.get();
+        return {child->second.get(), false};
     }
-    return this->children.emplace(childId, std::make_unique<CCTNode<NodeData>>(childId, this)).first->second.get();
+    return {this->children.emplace(childId, std::make_unique<CCTNode<NodeData>>(childId, this)).first->second.get(), true};
 }
 
 template<class NodeData>

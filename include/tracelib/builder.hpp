@@ -533,7 +533,7 @@ void EventProcessor<Graph>::handleFunctionEnterEvent(CCTree<NodeData> *tree, std
     // Search for the called function in the children of
     // the function node that represents the caller.
     auto fId = tree->functionNameToIdInsert(name);
-    auto child = tree->getCurrentNode()->tryEmplaceChild(fId);
+    auto [child, _] = tree->getCurrentNode()->tryEmplaceChild(fId);
     tree->setCurrentNode(child);
     child = nullptr;
 }
@@ -825,7 +825,7 @@ void EventProcessor<Graph>::handleStackSampleEvent(CCTree<NodeData> *tree, std::
     tree->setCurrentNode(tree->getRootNode());
     for (auto functionName: event->stackSample) {
         auto fId = tree->functionNameToIdInsert(functionName);
-        auto *child = tree->getCurrentNode()->tryEmplaceChild(fId);
+        auto [child, _] = tree->getCurrentNode()->tryEmplaceChild(fId);
         tree->setCurrentNode(child);
     }
     tree->getCurrentNode()->data->combine(std::forward<std::unique_ptr<Event>>(event), nullptr);
