@@ -80,28 +80,28 @@ public:
      * @brief Adds the specified child node to the children of this node.
      * @param child a new child node
      */
-    CCTNode<NodeData> *addChild(std::unique_ptr<CCTNode<NodeData>> &&child);
+    CCTNode<NodeData> *emplaceChild(std::unique_ptr<CCTNode<NodeData>> &&child);
 
     /**
      * @brief Removes the specified child node by its function id from the children of this node. The node
      * is deallocated as well.
      * @param childId a child node function id
      */
-    void removeChild(functionIdType childId);
+    void eraseChild(functionIdType childId);
 
     /**
      * @brief Returns the child node with the specified function id.
      * @param childId a child node function id
      * @return the child node with the specified function id
      */
-    CCTNode<NodeData>* getChild(functionIdType childId);
+    CCTNode<NodeData>* findChild(functionIdType childId);
 
     /**
      * @brief Returns the child node with the specified function id, insert new if not found.
      * @param childId a child node function id
      * @return the child node with the specified function id
      */
-    CCTNode<NodeData>* getChildInsert(functionIdType childId);
+    CCTNode<NodeData>* tryEmplaceChild(functionIdType childId);
 
     /**
      * @brief Merge other CCTNode into the current one.
@@ -181,25 +181,25 @@ CCTNode<NodeData>::~CCTNode() {
 }
 
 template<class NodeData>
-CCTNode<NodeData> *CCTNode<NodeData>::addChild(std::unique_ptr<CCTNode<NodeData>> &&child) {
+CCTNode<NodeData> *CCTNode<NodeData>::emplaceChild(std::unique_ptr<CCTNode<NodeData>> &&child) {
     auto ret = this->children.emplace(child->functionId, std::forward<std::unique_ptr<CCTNode<NodeData>>>(child)).first->second.get();
     ret->parent = this;
     return ret;
 }
 
 template<class NodeData>
-void CCTNode<NodeData>::removeChild(functionIdType childId) {
+void CCTNode<NodeData>::eraseChild(functionIdType childId) {
     this->children.erase(childId);
 }
 
 template<class NodeData>
-CCTNode<NodeData> * CCTNode<NodeData>::getChild(functionIdType childId) {
+CCTNode<NodeData> * CCTNode<NodeData>::findChild(functionIdType childId) {
     auto it = this->children.find(childId);
     return it != this->children.end() ? it->second.get() : nullptr;
 }
 
 template<class NodeData>
-CCTNode<NodeData> *CCTNode<NodeData>::getChildInsert(functionIdType childId) {
+CCTNode<NodeData> *CCTNode<NodeData>::tryEmplaceChild(functionIdType childId) {
     if (auto child = this->children.find(childId); child != this->children.end()) {
         return child->second.get();
     }
@@ -226,7 +226,7 @@ void CCTNode<NodeData>::merge(std::unique_ptr<CCTNode<NodeData>> &&other)
         if (auto child = this->children.find(node->functionId); child != this->children.end()) {
             child->second->merge(std::forward<std::unique_ptr<CCTNode<NodeData>>>(node));
         } else {
-            addChild(std::forward<std::unique_ptr<CCTNode<NodeData>>>(node));
+            emplaceChild(std::forward<std::unique_ptr<CCTNode<NodeData>>>(node));
         }
         node = nullptr;
     }
@@ -991,7 +991,7 @@ void CCTree<NodeData>::pruneSubtree(CCTNode<NodeData> *root, const long long int
 
     auto *parent = root->parent;
     if (parent != nullptr) {
-        parent->removeChild(root->functionId);
+        parent->eraseChild(root->functionId);
     }
 }
 
@@ -1113,7 +1113,7 @@ void CCTNode<NodeData>::remapFunctionId(const std::vector<std::string> &oldMap, 
     this->children.clear();
     for (auto &&[_, child] : oldChildren) {
         child->remapFunctionId(oldMap, newTree);
-        this->addChild(std::forward<std::unique_ptr<CCTNode<NodeData>>>(child));
+        this->emplaceChild(std::forward<std::unique_ptr<CCTNode<NodeData>>>(child));
         child = nullptr;
     }
 }

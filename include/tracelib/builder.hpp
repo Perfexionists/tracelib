@@ -533,7 +533,7 @@ void EventProcessor<Graph>::handleFunctionEnterEvent(CCTree<NodeData> *tree, std
     // Search for the called function in the children of
     // the function node that represents the caller.
     auto fId = tree->functionNameToIdInsert(name);
-    auto child = tree->getCurrentNode()->getChildInsert(fId);
+    auto child = tree->getCurrentNode()->tryEmplaceChild(fId);
     tree->setCurrentNode(child);
     child = nullptr;
 }
@@ -674,7 +674,7 @@ void EventProcessor<Graph>::handleBasicBlockExitEvent(CCTree<NodeData> *tree, st
                 // needs to check also if the last event before this was function exit
                 auto [fId, wasFound] = tree->functionNameToId(event->name);
                 if (wasFound) {
-                    nodeToUpdate = nodeToUpdate->getChild(fId);
+                    nodeToUpdate = nodeToUpdate->findChild(fId);
                 }
                 // Note: If node was not found even with adjustment. It is likely that the function was not recognized at the RTN
                 // granularity and was not gathered. Thus, this basic block does not have a parent function and is skipped.
@@ -825,7 +825,7 @@ void EventProcessor<Graph>::handleStackSampleEvent(CCTree<NodeData> *tree, std::
     tree->setCurrentNode(tree->getRootNode());
     for (auto functionName: event->stackSample) {
         auto fId = tree->functionNameToIdInsert(functionName);
-        auto *child = tree->getCurrentNode()->getChildInsert(fId);
+        auto *child = tree->getCurrentNode()->tryEmplaceChild(fId);
         tree->setCurrentNode(child);
     }
     tree->getCurrentNode()->data->combine(std::forward<std::unique_ptr<Event>>(event), nullptr);
