@@ -449,37 +449,39 @@ public:
      */
     class PostOrderIterator {
     private:
+        CCTree<NodeData> &tree;
         /**
          * @brief The current node that is pointed to by the iterator.
          */
-        CCTNode<NodeData>* currentNode;
+        nodeIdType currentNode;
         /**
          * @brief Stack that is used for storing the nodes that are to be visited.
          * The bool value indicates whether the node has been visited or not in context of the internal traversal
          * algorithm. When a node with the bool value true is popped from the stack it is set to the current node.
          */
-        std::stack<std::pair<CCTNode<NodeData>*, bool>> stack;
+        std::stack<std::pair<nodeIdType, bool>> stack;
 
         /**
          * @brief helper funtion to find the leftmost child of the current node with relation to already visited nodes.
          */
         void exploreUntilLeftmostChild() {
             while (!this->stack.empty()) {
-                auto& [node, visited] = this->stack.top();
+                auto [nodeId, visited] = this->stack.top();
                 if (!visited) {
+                    auto &node = tree.getNode(nodeId);
                     visited = true;
-                    for (auto it = node->children.rbegin(); it != node->children.rend(); ++it) {
-                        auto* child = it->second.get();
-                        if (child != nullptr) {
-                            this->stack.push({child, false});
+                    for (auto it = node.children.rbegin(); it != node.children.rend(); ++it) {
+                        auto childId = it->second;
+                        if (childId != NULL_NODE_ID) {
+                            this->stack.push({childId, false});
                         }
                     }
                 } else { // The leftmost child
-                    this->currentNode = node;
+                    this->currentNode = nodeId;
                     return;
                 }
             }
-            this->currentNode = nullptr;
+            this->currentNode = NULL_NODE_ID;
         }
     public:
         using iterator_category = std::forward_iterator_tag;
@@ -488,24 +490,24 @@ public:
         using pointer = CCTNode<NodeData>*;
         using reference = CCTNode<NodeData>&;
 
-        explicit PostOrderIterator(CCTNode<NodeData>* node = nullptr) : currentNode(node) {
-            if (node != nullptr) {
-                stack.push(std::make_pair(node, false));
+        explicit PostOrderIterator(CCTree<NodeData> &tree, nodeIdType nodeId = NULL_NODE_ID) : tree(tree), currentNode(nodeId) {
+            if (nodeId != NULL_NODE_ID) {
+                stack.push(std::make_pair(nodeId, false));
                 exploreUntilLeftmostChild();
             }
         }
 
-        CCTNode<NodeData>* operator*() const { return currentNode; }
-        CCTNode<NodeData>* operator->() { return currentNode; }
+        CCTNode<NodeData>* operator*() const { return &tree.getNode(currentNode); }
+        CCTNode<NodeData>* operator->() { return &tree.getNode(currentNode); }
 
         PostOrderIterator& operator++() { // Prefix increment
             if (this->stack.empty()) {
-                this->currentNode = nullptr;
+                this->currentNode = NULL_NODE_ID;
                 return *this;
             }
             this->stack.pop();
             if (this->stack.empty()) {
-                this->currentNode = nullptr;
+                this->currentNode = NULL_NODE_ID;
                 return *this;
             }
             exploreUntilLeftmostChild();
