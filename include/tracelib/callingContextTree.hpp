@@ -312,7 +312,9 @@ public:
      * @param childId a child node function id
      * @return the child node with the specified function id
      */
-    nodeIdType tryEmplaceChild(nodeIdType nodeId, functionIdType childFunctionId);
+    std::pair<nodeIdType, bool> tryEmplaceChild(nodeIdType nodeId, functionIdType childFunctionId);
+
+    nodeIdType emplaceChild(nodeIdType nodeId, functionIdType childFunctionId);
 
     /**
      * @brief Merge other CCTree into the current one.
@@ -935,14 +937,21 @@ nodeIdType CCTree<NodeData>::emplaceNode(functionIdType fId, nodeIdType parentId
 }
 
 template<class NodeData>
-nodeIdType CCTree<NodeData>::tryEmplaceChild(nodeIdType nodeId, functionIdType childFunctionId) {
+std::pair<nodeIdType, bool> CCTree<NodeData>::tryEmplaceChild(nodeIdType nodeId, functionIdType childFunctionId) {
     auto &node = this->getNode(nodeId);
     if (auto child = node.children.find(childFunctionId); child != node.children.end()) {
         return child->second;
     }
 
     auto newChildNodeId = this->emplaceNode(childFunctionId, nodeId);
-    node.children.emplace(childFunctionId, newChildNodeId);
+    node.addChild(childFunctionId, newChildNodeId);
+    return newChildNodeId;
+}
+
+template<class NodeData>
+nodeIdType CCTree<NodeData>::emplaceChild(nodeIdType nodeId, functionIdType childFunctionId) {
+    auto newChildNodeId = this->emplaceNode(childFunctionId, nodeId);
+    this->getNode(nodeId).addChild(childFunctionId, newChildNodeId);
     return newChildNodeId;
 }
 
@@ -950,10 +959,12 @@ template<class NodeData>
 void CCTree<NodeData>::merge(CCTree<NodeData> &&other, nodeIdType rootNodeId, nodeIdType otherRootNodeId, bool isNew) {
     for (auto [otherChildFId, otherChildNodeId] : other.getNode(otherRootNodeId).children) {
         auto remappedFunctionId = this->functionNameToIdInsert(other.functionIdToName(otherChildFId));
-        auto childNodeId = this->tryEmplaceChild(rootNodeId, remappedFunctionId);
+
+        auto [childNodeId, wasNew] = isNew ? {  this->emplaceChild(rootNodeId, remappedFunctionId), true } :
+                                             this->tryEmplaceChild(rootNodeId, remappedFunctionId);
 
         this->getNode(childNodeId).data.merge(std::move(other.getNode(otherChildNodeId).data));
-        this->merge(other, childNodeId, otherChildNodeId);
+        this->merge(other, childNodeId, otherChildNodeId, wasNew);
     }
 }
 
