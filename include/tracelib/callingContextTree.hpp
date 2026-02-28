@@ -100,16 +100,6 @@ public:
     nodeIdType findChild(functionIdType childId);
 
     /**
-     * @brief Merge other CCTNode into the current one.
-     */
-    void merge(std::unique_ptr<CCTNode<NodeData>>&& other);
-
-    /**
-     * @brief Recursively remap node's (and its children's) function id from the current map, into new tree's map.
-     */
-    void remapFunctionId(const std::vector<std::string> &oldMap, CCTree<NodeData> &newTree);
-
-    /**
      * @brief Comparison of nodes that is checking only the function id and is allows missmatched NodeData types.
      * @tparam U the type of the other node
      * @param other the other node
@@ -185,26 +175,6 @@ template<class NodeData>
 nodeIdType CCTNode<NodeData>::findChild(functionIdType childId) {
     auto it = this->children.find(childId);
     return it != this->children.end() ? it->second.get() : NULL_NODE_ID;
-}
-
-template<class NodeData>
-void CCTNode<NodeData>::merge(std::unique_ptr<CCTNode<NodeData>> &&other)
-{
-    this->data.merge(std::move(other->data));
-
-    for (auto &[_, node] : other->children) {
-        if (node == nullptr) {
-            continue;
-        }
-
-        if (auto child = this->children.find(node->functionId); child != this->children.end()) {
-            child->second->merge(std::forward<std::unique_ptr<CCTNode<NodeData>>>(node));
-        } else {
-            // addChild(std::forward<std::unique_ptr<CCTNode<NodeData>>>(node)); TODO
-        }
-        node = nullptr;
-    }
-    other = nullptr;
 }
 
 
@@ -347,7 +317,9 @@ public:
     /**
      * @brief Merge other CCTree into the current one.
      */
-    void merge(CCTree<NodeData> &&other);
+    void merge(CCTree<NodeData> &&other, nodeIdType rootNodeId      = AUXILIARY_ROOT_NODE_ID,
+                                         nodeIdType otherRootNodeId = AUXILIARY_ROOT_NODE_ID,
+                                         bool isNew = false);
 
     /**
      * @brief Form string representation of the tree.
@@ -975,9 +947,14 @@ nodeIdType CCTree<NodeData>::tryEmplaceChild(nodeIdType nodeId, functionIdType c
 }
 
 template<class NodeData>
-void CCTree<NodeData>::merge(CCTree<NodeData> &&other) {
-    other.getRootNode()->remapFunctionId(other.functionIdToNameMap, *this);
-    // getRootNode()->merge(std::move(other.nodes[0])); TODO
+void CCTree<NodeData>::merge(CCTree<NodeData> &&other, nodeIdType rootNodeId, nodeIdType otherRootNodeId, bool isNew) {
+    for (auto [otherChildFId, otherChildNodeId] : other.getNode(otherRootNodeId).children) {
+        auto remappedFunctionId = this->functionNameToIdInsert(other.functionIdToName(otherChildFId));
+        auto childNodeId = this->tryEmplaceChild(rootNodeId, remappedFunctionId);
+
+        this->getNode(childNodeId).data.merge(std::move(other.getNode(otherChildNodeId).data));
+        this->merge(other, childNodeId, otherChildNodeId);
+    }
 }
 
 template<class NodeData>
@@ -1114,23 +1091,6 @@ long long CCTree<NodeData>::getMaximumInvocations() {
     return max;
 }
 
-
-template<class NodeData>
-void CCTNode<NodeData>::remapFunctionId(const std::vector<std::string> &oldMap, CCTree<NodeData> &newTree) {
-    if (this->functionId >= oldMap.size()) {
-        std::cerr << "[E]: Function id " << this->functionId << " of CCTNode not found in tree's map!" << std::endl;
-        return;
-    }
-    this->functionId = newTree.functionNameToIdInsert(oldMap[this->functionId]);
-
-    auto oldChildren{std::move(this->children)};
-    this->children.clear();
-    for (auto [_, child] : oldChildren) {
-        child->remapFunctionId(oldMap, newTree);
-        // this->addChild(std::forward<std::unique_ptr<CCTNode<NodeData>>>(child)); TODO
-        child = nullptr;
-    }
-}
 
 // CCForest
 template <class NodeData>
