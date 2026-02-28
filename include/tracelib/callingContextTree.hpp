@@ -973,7 +973,7 @@ void CCTree<NodeData>::merge(CCTree<NodeData> &&other, nodeIdType rootNodeId, no
  */
 template<class NodeData>
 void CCTree<NodeData>::pruneSubtree(nodeIdType root, const long long int threshold) {
-    std::erase_if(root->children, [this, threshold](auto &item) {
+    std::erase_if(this->getNode(root)->children, [this, threshold](auto &item) {
         auto [_, childNodeId] = item;
         this->pruneSubtree(childNodeId, threshold);
         auto &child = this->getNode(childNodeId);
