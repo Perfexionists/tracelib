@@ -111,7 +111,7 @@ public:
      */
     long long int getInvocationFrequency() const override;
 
-    void merge(std::unique_ptr<PerfFoldedNodeData> &&other);
+    void merge(PerfFoldedNodeData &&other);
 
 private:
     friend class boost::serialization::access;

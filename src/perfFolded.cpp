@@ -129,7 +129,7 @@ long long int PerfFoldedNodeData::getInvocationFrequency() const {
     return this->samplesCnt;
 }
 
-void PerfFoldedNodeData::merge(std::unique_ptr<PerfFoldedNodeData> &&other) {
-    this->samplesCnt += other->samplesCnt;
+void PerfFoldedNodeData::merge(PerfFoldedNodeData &&other) {
+    this->samplesCnt += other.samplesCnt;
 }
 
