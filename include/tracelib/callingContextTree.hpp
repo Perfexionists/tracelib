@@ -427,8 +427,8 @@ public:
             // Push children of current node on stack
             nodeIdType nodeId = stack.top();
             stack.pop();
-            for (auto &[_, child] : tree.getNode(nodeId).children) {
-                stack.emplace(child.get());
+            for (auto &[_, childId] : tree.getNode(nodeId).children) {
+                stack.emplace(child);
             }
             // Update current node
             this->currentNode = stack.empty() ? NULL_NODE_ID : stack.top();
@@ -626,52 +626,52 @@ public:
      * @brief The begining iterator for the tree starting in the root and moving forward in pre-order fashion.
      * @return The iterator pointing to the root of the tree.
      */
-    defaultIterator begin() { return defaultIterator(this->getNode(AUXILIARY_ROOT_NODE_ID)); }
+    defaultIterator begin() { return defaultIterator(*this, this->getNode(AUXILIARY_ROOT_NODE_ID)); }
     /**
      * @brief The begining iterator for the tree starting in the specified node and moving forward in pre-order fashion.
      * @param root the root of the (sub)tree to traverse
      * @return The iterator pointing to the specified node treating it as the root of the (sub)tree.
      */
-    defaultIterator begin(CCTNode<NodeData>* root) { return defaultIterator(root); }
+    defaultIterator begin(nodeIdType root) { return defaultIterator(*this, root); }
     /**
      * @brief The end iterator for the tree.
      * @return the end iterator for the tree.
      */
-    defaultIterator end() { return defaultIterator(nullptr); }
+    defaultIterator end() { return defaultIterator(*this, NULL_NODE_ID); }
 
     /**
      * @brief The begining iterator for the tree starting in the root and moving forward in pre-order fashion.
      * @return The pre-order iterator pointing to the root of the tree.
      */
-    PreOrderIterator preOrderBegin() { return PreOrderIterator(this->root.get()); }
+    PreOrderIterator preOrderBegin() { return PreOrderIterator(*this, AUXILIARY_ROOT_NODE_ID); }
     /**
     * @brief The begining iterator for the tree starting in the specified node and moving forward in pre-order fashion.
     * @param root the root of the (sub)tree to traverse
     * @return The iterator pointing to the specified node treating it as the root of the (sub)tree.
     */
-    PreOrderIterator preOrderBegin(CCTNode<NodeData>* root) { return PreOrderIterator(root); }
+    PreOrderIterator preOrderBegin(nodeIdType root) { return PreOrderIterator(*this, root); }
     /**
      * @brief The end of pre-order iterator for the tree.
      * @return the end of pre-order iterator for the tree.
      */
-    PreOrderIterator preOrderEnd() { return PreOrderIterator(nullptr); }
+    PreOrderIterator preOrderEnd() { return PreOrderIterator(*this, NULL_NODE_ID); }
 
     /**
      * @brief The begining iterator for the tree starting in the root and moving forward in post-order fashion.
      * @return The pre-order iterator pointing to the root of the tree.
      */
-    PostOrderIterator postOrderBegin() { return PostOrderIterator(this->root.get()); }
+    PostOrderIterator postOrderBegin() { return PostOrderIterator(*this, AUXILIARY_ROOT_NODE_ID); }
     /**
      * @brief The begining iterator for the tree starting in the specified node and moving forward in post-order fashion.
      * @param root the root of the (sub)tree to traverse
      * @return The iterator pointing to the specified node treating it as the root of the (sub)tree.
      */
-    PostOrderIterator postOrderBegin(CCTNode<NodeData>* root) { return PostOrderIterator(root); }
+    PostOrderIterator postOrderBegin(nodeIdType root) { return PostOrderIterator(*this, root); }
     /**
      * @brief The end of post-order iterator for the tree.
      * @return the end of post-order iterator for the tree.
      */
-    PostOrderIterator postOrderEnd() { return PostOrderIterator(nullptr); }
+    PostOrderIterator postOrderEnd() { return PostOrderIterator(*this, NULL_NODE_ID); }
 
     /**
      * @brief The begining iterator for the tree starting in the root and moving forward in level-order fashion.
@@ -695,12 +695,12 @@ public:
      * @param node the node from which to travers back to the root.
      * @return The iterator pointing to the specified node.
      */
-    PathToRootIterator pathToRootBegin(CCTNode<NodeData>* node) { return PathToRootIterator(node); }
+    PathToRootIterator pathToRootBegin(nodeIdType node) { return PathToRootIterator(*this, node); }
     /**
      * @brief The end of path-to-root iterator for the tree (the root node).
      * @return the end of path-to-root iterator for the tree (the root node).
      */
-    PathToRootIterator pathToRootEnd() { return PathToRootIterator(nullptr); }
+    PathToRootIterator pathToRootEnd() { return PathToRootIterator(*this, NULL_NODE_ID); }
 
 protected:
     /**
