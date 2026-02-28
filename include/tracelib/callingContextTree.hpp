@@ -293,13 +293,6 @@ public:
     void setCurrentNodeId(nodeIdType node);
 
     /**
-     * @brief Retrieves the root node of the tree.
-     * @return root node
-     */
-    const CCTNode<NodeData>* getRootNode() const;
-    CCTNode<NodeData>* getRootNode();
-
-    /**
      * @brief Prunes the tree starting from leaves based on the specified threshold.
      * @param threshold the threshold value of occurrence frequency for functions in their contexts
      */
@@ -629,7 +622,7 @@ public:
      * @brief The begining iterator for the tree starting in the root and moving forward in pre-order fashion.
      * @return The iterator pointing to the root of the tree.
      */
-    defaultIterator begin() { return defaultIterator(this->getRootNode()); }
+    defaultIterator begin() { return defaultIterator(this->getNode(AUXILIARY_ROOT_NODE_ID)); }
     /**
      * @brief The begining iterator for the tree starting in the specified node and moving forward in pre-order fashion.
      * @param root the root of the (sub)tree to traverse
@@ -770,7 +763,7 @@ template<class NodeData>
 CCTree<NodeData>::CCTree() {
     this->nodes.emplace_back(AUXILIARY_ROOT_FUNCTION_ID);
     this->functionNameToIdInsert(std::string{AUXILIARY_ROOT_NAME});
-    this->currentNode = this->getRootNode();
+    this->currentNode = AUXILIARY_ROOT_NODE_ID;
 }
 
 template<class NodeData>
@@ -790,21 +783,11 @@ void CCTree<NodeData>::setCurrentNodeId(nodeIdType nodeId) {
 }
 
 template<class NodeData>
-const CCTNode<NodeData> * CCTree<NodeData>::getRootNode() const {
-    return &this->nodes.front();
-}
-
-template<class NodeData>
-CCTNode<NodeData> * CCTree<NodeData>::getRootNode() {
-    return &this->nodes.front();
-}
-
-template<class NodeData>
 void CCTree<NodeData>::prune(const long long int threshold) {
     // Note: invalidate current node. It is assumed that the building of the tree is finished
     // The current node should not be removed by prunning since it is at the auxiliary root at the end.
     this->currentNode = NULL_NODE_ID;
-    this->pruneSubtree(this->getRootNode(), threshold);
+    this->pruneSubtree(AUXILIARY_ROOT_NODE_ID, threshold);
 }
 
 template<class NodeData>
@@ -1057,7 +1040,7 @@ std::string CCTree<NodeData>::toString() const {
 
 template<class NodeData>
 bool CCTree<NodeData>::isEmpty() const {
-    return currentNode == this->getRootNode() && this->root->children.empty();
+    return currentNode == AUXILIARY_ROOT_NODE_ID && this->root->children.empty();
 }
 
 template<class NodeData>
