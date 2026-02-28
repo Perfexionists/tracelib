@@ -83,7 +83,7 @@ public:
      * @brief Adds the specified child node to the children of this node.
      * @param child a new child node
      */
-    CCTNode<NodeData> *emplaceChild(std::unique_ptr<CCTNode<NodeData>> &&child);
+    void addChild(functionIdType fId, nodeIdType nodeId);
 
     /**
      * @brief Removes the specified child node by its function id from the children of this node. The node
@@ -179,10 +179,8 @@ CCTNode<NodeData>::~CCTNode() {
 }
 
 template<class NodeData>
-CCTNode<NodeData> *CCTNode<NodeData>::emplaceChild(std::unique_ptr<CCTNode<NodeData>> &&child) {
-    auto ret = this->children.emplace(child->functionId, std::forward<std::unique_ptr<CCTNode<NodeData>>>(child)).first->second.get();
-    ret->parent = this;
-    return ret;
+void addChild(functionIdType fId, nodeIdType nodeId) {
+    this->children.emplace(fId, nodeId);
 }
 
 template<class NodeData>
@@ -217,7 +215,7 @@ void CCTNode<NodeData>::merge(std::unique_ptr<CCTNode<NodeData>> &&other)
         if (auto child = this->children.find(node->functionId); child != this->children.end()) {
             child->second->merge(std::forward<std::unique_ptr<CCTNode<NodeData>>>(node));
         } else {
-            emplaceChild(std::forward<std::unique_ptr<CCTNode<NodeData>>>(node));
+            // addChild(std::forward<std::unique_ptr<CCTNode<NodeData>>>(node)); TODO
         }
         node = nullptr;
     }
@@ -1116,7 +1114,7 @@ void CCTNode<NodeData>::remapFunctionId(const std::vector<std::string> &oldMap, 
     this->children.clear();
     for (auto [_, child] : oldChildren) {
         child->remapFunctionId(oldMap, newTree);
-        this->emplaceChild(std::forward<std::unique_ptr<CCTNode<NodeData>>>(child));
+        // this->addChild(std::forward<std::unique_ptr<CCTNode<NodeData>>>(child)); TODO
         child = nullptr;
     }
 }
