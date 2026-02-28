@@ -162,7 +162,7 @@ CCTNode<NodeData>::~CCTNode() {
 }
 
 template<class NodeData>
-void addChild(functionIdType fId, nodeIdType nodeId) {
+void CCTNode<NodeData>::addChild(functionIdType fId, nodeIdType nodeId) {
     this->children.emplace(fId, nodeId);
 }
 
@@ -174,7 +174,7 @@ void CCTNode<NodeData>::eraseChild(functionIdType childId) {
 template<class NodeData>
 nodeIdType CCTNode<NodeData>::findChild(functionIdType childId) {
     auto it = this->children.find(childId);
-    return it != this->children.end() ? it->second.get() : NULL_NODE_ID;
+    return it != this->children.end() ? it->second : NULL_NODE_ID;
 }
 
 
