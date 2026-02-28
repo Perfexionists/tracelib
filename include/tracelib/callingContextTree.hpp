@@ -923,12 +923,12 @@ template<class NodeData>
 std::pair<nodeIdType, bool> CCTree<NodeData>::tryEmplaceChild(nodeIdType nodeId, functionIdType childFunctionId) {
     auto &node = this->getNode(nodeId);
     if (auto child = node.children.find(childFunctionId); child != node.children.end()) {
-        return child->second;
+        return { child->second, false };
     }
 
     auto newChildNodeId = this->emplaceNode(childFunctionId, nodeId);
     node.addChild(childFunctionId, newChildNodeId);
-    return newChildNodeId;
+    return { newChildNodeId, true };
 }
 
 template<class NodeData>
