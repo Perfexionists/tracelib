@@ -528,10 +528,11 @@ public:
      */
     class PathToRootIterator {
     private:
+        CCTree<NodeData> &tree;
         /**
          * @brief The current node that is pointed to by the iterator.
          */
-        CCTNode<NodeData>* currentNode;
+        nodeIdType currentNode;
     public:
         using iterator_category = std::forward_iterator_tag;
         using difference_type = std::ptrdiff_t;
@@ -539,16 +540,16 @@ public:
         using pointer = CCTNode<NodeData>*;
         using reference = CCTNode<NodeData>&;
 
-        explicit PathToRootIterator(CCTNode<NodeData>* node) : currentNode(node) {
-            this->currentNode = node;
+        explicit PathToRootIterator(CCTree<NodeData> &tree, nodeIdType nodeId) : tree(tree), currentNode(nodeId) {
+            this->currentNode = nodeId;
         }
 
-        CCTNode<NodeData>* operator*() const { return currentNode; }
-        CCTNode<NodeData>* operator->() { return currentNode; }
+        CCTNode<NodeData>* operator*() const { return &tree.getNode(currentNode); }
+        CCTNode<NodeData>* operator->() { return &tree.getNode(currentNode); }
 
         PathToRootIterator& operator++() { // Prefix increment
             // TODO: decide if the endpoint should be nullptr or the auxiliary root
-            this->currentNode = this->currentNode->parent;
+            this->currentNode = (*this)->parent;
             return *this;
         }
         PathToRootIterator operator++(int) { // Postfix increment
