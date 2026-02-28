@@ -534,7 +534,7 @@ void EventProcessor<Graph>::handleFunctionEnterEvent(CCTree<NodeData> *tree, std
     // the function node that represents the caller.
     auto fId = tree->functionNameToIdInsert(name);
     auto [nodeId, _] = tree->tryEmplaceChild(tree->getCurrentNodeId(), fId);
-    tree->setCurrentNode(nodeId);
+    tree->setCurrentNodeId(nodeId);
 }
 
 template<IsSpecializedGraphType Graph>
@@ -585,7 +585,7 @@ void EventProcessor<Graph>::handleFunctionExitEvent(CCTree<NodeData> *tree, std:
         std::cerr << "[W]: Could not find funcion entering event at function exit."
                 "Could not update the data in node!" << std::endl;
     }
-    tree->setCurrentNode(tree->getNode(tree->getCurrentNodeId()).parent);
+    tree->setCurrentNodeId(tree->getNode(tree->getCurrentNodeId()).parent);
     event = nullptr;
 }
 
@@ -821,11 +821,11 @@ void EventProcessor<Graph>::handleThreadExitEvent(CCGraph<NodeData> *graph, std:
 
 template<IsSpecializedGraphType Graph>
 void EventProcessor<Graph>::handleStackSampleEvent(CCTree<NodeData> *tree, std::unique_ptr<Event> &&event) {
-    tree->setCurrentNode(tree->getRootNode());
+    tree->setCurrentNodeId(AUXILIARY_ROOT_NODE_ID);
     for (auto functionName: event->stackSample) {
         auto fId = tree->functionNameToIdInsert(functionName);
         auto [nodeId, _] = tree->tryEmplaceChild(tree->getCurrentNodeId(), fId);
-        tree->setCurrentNode(nodeId);
+        tree->setCurrentNodeId(nodeId);
     }
     tree->getNode(tree->getCurrentNode()).data.combine(std::forward<std::unique_ptr<Event>>(event), nullptr);
 }
