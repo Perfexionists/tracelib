@@ -54,7 +54,7 @@ public:
     /**
      * @brief The parent node of this node.
      */
-    CCTNode* parent = nullptr; // TODO
+    nodeIdType parent = NULL_NODE_ID;
 
     /**
      * @brief The children of this node in a map where the key is nodes function name.
@@ -72,7 +72,7 @@ public:
      * @param name the function name for the new node
      * @param parent parent node of the node
      */
-    explicit CCTNode(functionIdType id, CCTNode* parent = nullptr);
+    explicit CCTNode(functionIdType id, nodeIdType parent = NULL_NODE_ID);
 
     /**
      * @brief Destructor. Deallocates the node data and all its children.
@@ -134,8 +134,8 @@ private:
     void save(Archive & ar, const unsigned int version) const {
         ar & BOOST_SERIALIZATION_NVP(functionId);
         ar & BOOST_SERIALIZATION_NVP(data);
+        ar & BOOST_SERIALIZATION_NVP(parent);
         ar & BOOST_SERIALIZATION_NVP(children);
-        // Doesn't serialize parent (handled by child relationship in the parent)
     }
 
     /**
@@ -148,13 +148,14 @@ private:
     void load(Archive & ar, const unsigned int version) {
         ar & BOOST_SERIALIZATION_NVP(functionId);
         ar & BOOST_SERIALIZATION_NVP(data);
+        ar & BOOST_SERIALIZATION_NVP(parent);
         ar & BOOST_SERIALIZATION_NVP(children);
     }
     BOOST_SERIALIZATION_SPLIT_MEMBER() // Allows to split default serialization function into save and load functions
 };
 
 template<class NodeData>
-CCTNode<NodeData>::CCTNode(functionIdType id, CCTNode *parent) : functionId(id), parent(parent) {
+CCTNode<NodeData>::CCTNode(functionIdType id, nodeIdType parent) : functionId(id), parent(parent) {
 }
 
 template<class NodeData>
@@ -990,7 +991,7 @@ void CCTree<NodeData>::pruneSubtree(CCTNode<NodeData> *root, const long long int
     }
     this->pruneSubtree_rec(root, threshold);
 
-    auto *parent = root->parent;
+    auto parent = root->parent;
     if (parent != nullptr) {
         parent->eraseChild(root->functionId);
     }
