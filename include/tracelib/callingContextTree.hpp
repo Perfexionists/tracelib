@@ -23,6 +23,7 @@
 #define AUXILIARY_ROOT_NAME ".ROOT"
 
 using functionIdType = uint32_t;
+using nodeIdType = uint32_t;
 
 template <class NodeData>
 class CCTree;
@@ -243,10 +244,10 @@ template <class NodeData>
 class CCTree {
 private:
     /**
-     * @brief The root node of the tree.
-     * By default it is always an auxiliary root node with function name ".ROOT".
+     * @brief The nodes of the tree.
+     * By default the first node is always an auxiliary root node with function name ".ROOT".
      */
-    std::unique_ptr<CCTNode<NodeData>> root;
+    std::vector<CCTNode<NodeData>> nodes;
     /**
      * @brief The node which represents the currently "executed" function. The function call was encountered
      * and every event happening until a new function call or function returns is associated with this node.
@@ -660,7 +661,7 @@ public:
      * @brief The begining iterator for the tree starting in the root and moving forward in pre-order fashion.
      * @return The iterator pointing to the root of the tree.
      */
-    defaultIterator begin() { return defaultIterator(this->root.get()); }
+    defaultIterator begin() { return defaultIterator(this->getRootNode()); }
     /**
      * @brief The begining iterator for the tree starting in the specified node and moving forward in pre-order fashion.
      * @param root the root of the (sub)tree to traverse
@@ -711,7 +712,7 @@ public:
      * @brief The begining iterator for the tree starting in the root and moving forward in level-order fashion.
      * @return The level-order iterator pointing to the root of the tree.
      */
-    LevelOrderIterator levelOrderBegin() { return LevelOrderIterator(this->root.get()); }
+    LevelOrderIterator levelOrderBegin() { return LevelOrderIterator(this->getRootNode()); }
      /**
      * @brief The begining iterator for the tree starting in the specified node and moving forward in level-order fashion.
      * @param root the root of the (sub)tree to traverse
@@ -768,7 +769,7 @@ private:
     template<class Archive>
     void save(Archive & ar, const unsigned int version) const {
         // Serialize root pointer - this will trigger serialization of the entire tree
-        ar & BOOST_SERIALIZATION_NVP(root);
+        ar & BOOST_SERIALIZATION_NVP(nodes);
         ar & BOOST_SERIALIZATION_NVP(currentNode);
         ar & BOOST_SERIALIZATION_NVP(processName);
         ar & BOOST_SERIALIZATION_NVP(pid);
@@ -785,9 +786,9 @@ private:
      */
     template<class Archive>
     void load(Archive & ar, const unsigned int version) {
-        this->root = nullptr;
+        this->nodes.clear();
         this->currentNode = nullptr;
-        ar & BOOST_SERIALIZATION_NVP(root);
+        ar & BOOST_SERIALIZATION_NVP(nodes);
         ar & BOOST_SERIALIZATION_NVP(currentNode);
         ar & BOOST_SERIALIZATION_NVP(processName);
         ar & BOOST_SERIALIZATION_NVP(pid);
@@ -800,14 +801,14 @@ private:
 
 template<class NodeData>
 CCTree<NodeData>::CCTree() {
-    this->root = std::make_unique<CCTNode<NodeData>>(AUXILIARY_ROOT_ID);
+    this->nodes.emplace_back(AUXILIARY_ROOT_ID);
     this->functionNameToIdInsert(std::string{AUXILIARY_ROOT_NAME});
-    this->currentNode = root.get();
+    this->currentNode = this->getRootNode();
 }
 
 template<class NodeData>
 CCTree<NodeData>::~CCTree() {
-    this->root = nullptr;
+    this->nodes.clear();
     this->currentNode = nullptr;
 }
 
@@ -822,13 +823,13 @@ void CCTree<NodeData>::setCurrentNode(CCTNode<NodeData> *node) {
 }
 
 template<class NodeData>
-CCTNode<NodeData> * CCTree<NodeData>::getRootNode() {
-    return this->root.get();
+const CCTNode<NodeData> * CCTree<NodeData>::getRootNode() const {
+    return &this->nodes.front();
 }
 
 template<class NodeData>
-const CCTNode<NodeData> * CCTree<NodeData>::getRootNode() const {
-    return this->root.get();
+CCTNode<NodeData> * CCTree<NodeData>::getRootNode() {
+    return &this->nodes.front();
 }
 
 template<class NodeData>
@@ -963,8 +964,8 @@ std::pair<int, std::vector<Operation<CCTNode<NodeData>>>> CCTree<NodeData>::tree
 
 template<class NodeData>
 void CCTree<NodeData>::merge(CCTree<NodeData> &&other) {
-    other.root->remapFunctionId(other.functionIdToNameMap, *this);
-    getRootNode()->merge(std::forward<std::unique_ptr<CCTNode<NodeData>>>(other.root));
+    other.getRootNode()->remapFunctionId(other.functionIdToNameMap, *this);
+    // getRootNode()->merge(std::move(other.nodes[0])); TODO
 }
 
 template<class NodeData>
@@ -1043,12 +1044,12 @@ std::string CCTree<NodeData>::toString() const {
     std::stringstream sstream;
     std::string offset;
     const std::string offsetStr = " | ";
-    std::stack<CCTNode<NodeData>*> stack;
+    std::stack<const CCTNode<NodeData>*> stack;
 
-    stack.push(this->root.get());
+    stack.push(this->getRootNode());
 
     while(!stack.empty()) {
-        CCTNode<NodeData>* currentNode = stack.top();
+        const CCTNode<NodeData>* currentNode = stack.top();
         stack.pop();
         if (currentNode == nullptr) {
             for (auto& _ : offsetStr) {
@@ -1070,7 +1071,7 @@ std::string CCTree<NodeData>::toString() const {
 
 template<class NodeData>
 bool CCTree<NodeData>::isEmpty() const {
-    return currentNode == root and this->root->children.empty();
+    return currentNode == this->getRootNode() && this->root->children.empty();
 }
 
 template<class NodeData>
