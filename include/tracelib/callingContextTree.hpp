@@ -19,11 +19,13 @@
 
 #include "utils.hpp"
 
-#define AUXILIARY_ROOT_ID 0
-#define AUXILIARY_ROOT_NAME ".ROOT"
-
 using functionIdType = uint32_t;
 using nodeIdType = uint32_t;
+
+const nodeIdType NULL_NODE_ID = std::numeric_limits<decltype(NULL_NODE_ID)>::max();
+const nodeIdType AUXILIARY_ROOT_NODE_ID = 0;
+const functionIdType AUXILIARY_ROOT_FUNCTION_ID = 0;
+#define AUXILIARY_ROOT_NAME ".ROOT"
 
 template <class NodeData>
 class CCTree;
@@ -52,12 +54,12 @@ public:
     /**
      * @brief The parent node of this node.
      */
-    CCTNode* parent = nullptr;
+    CCTNode* parent = nullptr; // TODO
 
     /**
      * @brief The children of this node in a map where the key is nodes function name.
      */
-    std::unordered_map<functionIdType, std::unique_ptr<CCTNode>> children = {};
+    std::unordered_map<functionIdType, nodeIdType> children = {};
 
     /**
      * @brief Creates an empty node.
@@ -164,10 +166,6 @@ private:
         ar & BOOST_SERIALIZATION_NVP(functionId);
         ar & BOOST_SERIALIZATION_NVP(data);
         ar & BOOST_SERIALIZATION_NVP(children);
-        // Fix parent pointers after loading children
-        for (auto& pair : children) {
-            pair.second->parent = this;
-        }
     }
     BOOST_SERIALIZATION_SPLIT_MEMBER() // Allows to split default serialization function into save and load functions
 };
@@ -245,7 +243,7 @@ private:
      * and every event happening until a new function call or function returns is associated with this node.
      * It is used to build the tree based on the events.
      */
-    CCTNode<NodeData>* currentNode;
+    CCTNode<NodeData>* currentNode; // TODO
 
     struct TransparentStringHash {
         using is_transparent = void;
@@ -293,6 +291,13 @@ public:
 
     const std::string &functionIdToName(functionIdType id) const {
         return functionIdToNameMap.at(id);
+    }
+
+    const CCTNode<NodeData> &getNode(nodeIdType nodeId) const {
+        return this->nodes[nodeId];
+    }
+    CCTNode<NodeData> &getNode(nodeIdType nodeId) {
+        return this->nodes[nodeId];
     }
 
     using valueType = NodeData;
@@ -599,13 +604,17 @@ public:
     class LevelOrderIterator {
     private:
         /**
+         * @brief The iterated tree.
+         */
+        CCTree<NodeData> &tree;
+        /**
          * @brief The current node that is pointed to by the iterator.
          */
-        CCTNode<NodeData>* currentNode;
+        nodeIdType currentNode;
         /**
          * @brief the queue used for the BFS traversal.
          */
-        std::deque<CCTNode<NodeData>*> queue;
+        std::deque<nodeIdType> queue;
     public:
         using iterator_category = std::forward_iterator_tag;
         using difference_type = std::ptrdiff_t;
@@ -613,29 +622,29 @@ public:
         using pointer = CCTNode<NodeData>*;
         using reference = CCTNode<NodeData>&;
 
-        explicit LevelOrderIterator(CCTNode<NodeData>* node = nullptr) : currentNode(node) {
+        explicit LevelOrderIterator(CCTree<NodeData &tree, nodeIdType node = NULL_NODE_ID) : tree(tree), currentNode(node) {
             this->currentNode = node;
-            if (this->currentNode) {
+            if (this->currentNode != NULL_NODE_ID) {
                 this->queue.push_back(this->currentNode);
             }
         }
 
-        CCTNode<NodeData>* operator*() const { return currentNode; }
-        CCTNode<NodeData>* operator->() { return currentNode; }
+        CCTNode<NodeData>* operator*() const { return &tree.getNode(currentNode); }
+        CCTNode<NodeData>* operator->() { return &tree.getNode(currentNode); }
 
         LevelOrderIterator& operator++() { // Prefix increment
             if (this->queue.empty()) {
-                this->currentNode = nullptr;
+                this->currentNode = NULL_NODE_ID;
                 return *this;
             }
-            auto *node = this->queue.front();
+            auto &node = this->tree.getNode(this->queue.front());
             this->queue.pop_front();
             // Add children to the queue
-            for (auto& [_, child] : node->children) {
-                this->queue.push_back(child.get());
+            for (auto& [_, childId] : node.children) {
+                this->queue.push_back(childId);
             }
             // Update the current node
-            this->currentNode = this->queue.empty() ? nullptr : this->queue.front();
+            this->currentNode = this->queue.empty() ? NULL_NODE_ID : this->queue.front();
             return *this;
         }
         LevelOrderIterator operator++(int) { // Postfix increment
@@ -704,18 +713,18 @@ public:
      * @brief The begining iterator for the tree starting in the root and moving forward in level-order fashion.
      * @return The level-order iterator pointing to the root of the tree.
      */
-    LevelOrderIterator levelOrderBegin() { return LevelOrderIterator(this->getRootNode()); }
+    LevelOrderIterator levelOrderBegin() { return LevelOrderIterator(*this, AUXILIARY_ROOT_NODE_ID); }
      /**
      * @brief The begining iterator for the tree starting in the specified node and moving forward in level-order fashion.
      * @param root the root of the (sub)tree to traverse
      * @return The iterator pointing to the specified node treating it as the root of the (sub)tree.
      */
-    LevelOrderIterator levelOrderBegin(CCTNode<NodeData>* root) { return LevelOrderIterator(root); }
+    LevelOrderIterator levelOrderBegin(nodeIdType rootId) { return LevelOrderIterator(*this, rootId); }
     /**
      * @brief The end of level-order iterator for the tree.
      * @return the end of level-order iterator for the tree.
      */
-    LevelOrderIterator levelOrderEnd() { return LevelOrderIterator(nullptr); }
+    LevelOrderIterator levelOrderEnd() { return LevelOrderIterator(*this, NULL_NODE_ID); }
 
     /**
      * @brief The begining iterator for the tree starting in the specified node and moving backward to the root of the tree.
@@ -793,7 +802,7 @@ private:
 
 template<class NodeData>
 CCTree<NodeData>::CCTree() {
-    this->nodes.emplace_back(AUXILIARY_ROOT_ID);
+    this->nodes.emplace_back(AUXILIARY_ROOT_FUNCTION_ID);
     this->functionNameToIdInsert(std::string{AUXILIARY_ROOT_NAME});
     this->currentNode = this->getRootNode();
 }
@@ -1036,26 +1045,27 @@ std::string CCTree<NodeData>::toString() const {
     std::stringstream sstream;
     std::string offset;
     const std::string offsetStr = " | ";
-    std::stack<const CCTNode<NodeData>*> stack;
+    std::stack<nodeIdType> stack;
 
-    stack.push(this->getRootNode());
+    stack.push(AUXILIARY_ROOT_NODE_ID);
 
     while(!stack.empty()) {
-        const CCTNode<NodeData>* currentNode = stack.top();
+        nodeIdType currentNodeId = stack.top();
         stack.pop();
-        if (currentNode == nullptr) {
+        if (currentNodeId == NULL_NODE_ID) {
             for (auto& _ : offsetStr) {
                 offset.pop_back();
             }
             continue;
         }
 
-        sstream << offset << this->functionIdToName(currentNode->functionId) << "\n";
+        const auto &currentNode = this->getNode(currentNodeId);
+        sstream << offset << this->functionIdToName(currentNode.functionId) << "\n";
 
-        stack.emplace(nullptr);
+        stack.emplace(NULL_NODE_ID);
         offset += " | ";
-        for (auto &[_, child] : currentNode->children) {
-            stack.emplace(child.get());
+        for (auto &[_, childId] : currentNode.children) {
+            stack.emplace(childId);
         }
     }
     return sstream.str();
@@ -1102,9 +1112,9 @@ void CCTNode<NodeData>::remapFunctionId(const std::vector<std::string> &oldMap, 
     }
     this->functionId = newTree.functionNameToIdInsert(oldMap[this->functionId]);
 
-    auto oldChildren{std::forward<std::unordered_map<functionIdType, std::unique_ptr<CCTNode>>>(this->children)};
+    auto oldChildren{std::move(this->children)};
     this->children.clear();
-    for (auto &&[_, child] : oldChildren) {
+    for (auto [_, child] : oldChildren) {
         child->remapFunctionId(oldMap, newTree);
         this->emplaceChild(std::forward<std::unique_ptr<CCTNode<NodeData>>>(child));
         child = nullptr;
