@@ -533,7 +533,7 @@ void EventProcessor<Graph>::handleFunctionEnterEvent(CCTree<NodeData> *tree, std
     // Search for the called function in the children of
     // the function node that represents the caller.
     auto fId = tree->functionNameToIdInsert(name);
-    auto nodeId = tree->tryEmplaceChild(tree->getCurrentNode(), fId);
+    auto [nodeId, _] = tree->tryEmplaceChild(tree->getCurrentNode(), fId);
     tree->setCurrentNode(nodeId);
 }
 

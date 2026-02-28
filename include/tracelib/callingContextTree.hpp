@@ -711,7 +711,7 @@ protected:
      * @param root the node representing the root of the subtree to prune
      * @param threshold the threashold frequency of occurence of the function in a context
      */
-    void pruneSubtree(CCTNode<NodeData> *root, const int long long threshold);
+    void pruneSubtree(nodeIdType root, const int long long threshold);
 
     class TreeInfo {
     public:
@@ -960,7 +960,7 @@ void CCTree<NodeData>::merge(CCTree<NodeData> &&other, nodeIdType rootNodeId, no
     for (auto [otherChildFId, otherChildNodeId] : other.getNode(otherRootNodeId).children) {
         auto remappedFunctionId = this->functionNameToIdInsert(other.functionIdToName(otherChildFId));
 
-        auto [childNodeId, wasNew] = isNew ? {  this->emplaceChild(rootNodeId, remappedFunctionId), true } :
+        auto [childNodeId, wasNew] = isNew ? std::pair{ this->emplaceChild(rootNodeId, remappedFunctionId), true } :
                                              this->tryEmplaceChild(rootNodeId, remappedFunctionId);
 
         this->getNode(childNodeId).data.merge(std::move(other.getNode(otherChildNodeId).data));
