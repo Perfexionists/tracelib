@@ -100,13 +100,6 @@ public:
     nodeIdType findChild(functionIdType childId);
 
     /**
-     * @brief Returns the child node with the specified function id, insert new if not found.
-     * @param childId a child node function id
-     * @return the child node with the specified function id
-     */
-    std::pair<CCTNode<NodeData> *, bool> tryEmplaceChild(functionIdType childId);
-
-    /**
      * @brief Merge other CCTNode into the current one.
      */
     void merge(std::unique_ptr<CCTNode<NodeData>>&& other);
@@ -192,14 +185,6 @@ template<class NodeData>
 nodeIdType CCTNode<NodeData>::findChild(functionIdType childId) {
     auto it = this->children.find(childId);
     return it != this->children.end() ? it->second.get() : NULL_NODE_ID;
-}
-
-template<class NodeData>
-std::pair<CCTNode<NodeData> *, bool> CCTNode<NodeData>::tryEmplaceChild(functionIdType childId) {
-    if (auto child = this->children.find(childId); child != this->children.end()) {
-        return {child->second.get(), false};
-    }
-    return {this->children.emplace(childId, std::make_unique<CCTNode<NodeData>>(childId, this)).first->second.get(), true};
 }
 
 template<class NodeData>
@@ -349,6 +334,15 @@ public:
      */
     void prune(long long int threshold);
     std::pair<int, std::vector<Operation<CCTNode<NodeData>>>> treeEditDistance(CCTree<NodeData>& other);
+
+    nodeIdType emplaceNode(functionIdType fId, nodeIdType parentId);
+
+    /**
+     * @brief Returns the child node with the specified function id, insert new if not found.
+     * @param childId a child node function id
+     * @return the child node with the specified function id
+     */
+    nodeIdType tryEmplaceChild(nodeIdType nodeId, functionIdType childFunctionId);
 
     /**
      * @brief Merge other CCTree into the current one.
@@ -959,6 +953,25 @@ std::pair<int, std::vector<Operation<CCTNode<NodeData>>>> CCTree<NodeData>::tree
     }
 
     return {treeDistance.back().back(), operations.back().back()};
+}
+
+template<class NodeData>
+nodeIdType CCTree<NodeData>::emplaceNode(functionIdType fId, nodeIdType parentId) {
+    nodeIdType id = this->nodes.size();
+    this->nodes.emplace_back(fId, parentId);
+    return id;
+}
+
+template<class NodeData>
+nodeIdType CCTree<NodeData>::tryEmplaceChild(nodeIdType nodeId, functionIdType childFunctionId) {
+    auto &node = this->getNode(nodeId);
+    if (auto child = node.children.find(childFunctionId); child != node.children.end()) {
+        return child->second;
+    }
+
+    auto newChildNodeId = this->emplaceNode(childFunctionId, nodeId);
+    node.children.emplace(childFunctionId, newChildNodeId);
+    return newChildNodeId;
 }
 
 template<class NodeData>
