@@ -577,7 +577,7 @@ void EventProcessor<Graph>::handleFunctionExitEvent(CCTree<NodeData> *tree, std:
         auto *backloggedEnterEvent = it->get();
         if (event->isComplementaryEvent(backloggedEnterEvent)) {
             foundTheEnterEventInBacklog = true;
-            tree->getCurrentNode()->data->combine(std::forward<std::unique_ptr<Event>>(*it), std::forward<std::unique_ptr<Event>>(event));
+            tree->getCurrentNode()->data.combine(std::forward<std::unique_ptr<Event>>(*it), std::forward<std::unique_ptr<Event>>(event));
             this->functionsBacklog.erase((it + 1).base());
             break;
         }
@@ -680,7 +680,7 @@ void EventProcessor<Graph>::handleBasicBlockExitEvent(CCTree<NodeData> *tree, st
                 // granularity and was not gathered. Thus, this basic block does not have a parent function and is skipped.
             }
             if (nodeToUpdate) {
-                nodeToUpdate->data->combine(std::forward<std::unique_ptr<Event>>(*it), std::forward<std::unique_ptr<Event>>(event));
+                nodeToUpdate->data.combine(std::forward<std::unique_ptr<Event>>(*it), std::forward<std::unique_ptr<Event>>(event));
             }
             this->basicBlocksBacklog.erase((it + 1).base());
             break;
@@ -828,7 +828,7 @@ void EventProcessor<Graph>::handleStackSampleEvent(CCTree<NodeData> *tree, std::
         auto [child, _] = tree->getCurrentNode()->tryEmplaceChild(fId);
         tree->setCurrentNode(child);
     }
-    tree->getCurrentNode()->data->combine(std::forward<std::unique_ptr<Event>>(event), nullptr);
+    tree->getCurrentNode()->data.combine(std::forward<std::unique_ptr<Event>>(event), nullptr);
 }
 
 template<IsSpecializedGraphType Graph>
@@ -1121,7 +1121,7 @@ template<IsSpecializedGraphType Graph>
 void Builder<Graph>::serializeCCTreeToPerfFoldedFormat(std::ostream &outputStream, CCTree<NodeData> *treeToSerialize) {
     auto& tree = *treeToSerialize;
     for (auto* node : tree) {
-        const long long int duration = node->data->getDuration();
+        const long long int duration = node->data.getDuration();
         if (duration <= 0) {
             continue;
         }

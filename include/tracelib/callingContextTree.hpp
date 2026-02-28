@@ -47,7 +47,7 @@ public:
     /**
      * @brief The node data should be an instance of class derived from NodeData class.
      */
-    std::unique_ptr<NodeData> data;
+    NodeData data;
 
     /**
      * @brief The parent node of this node.
@@ -173,8 +173,7 @@ private:
 };
 
 template<class NodeData>
-CCTNode<NodeData>::CCTNode(functionIdType id, CCTNode *parent) : functionId(id), parent(parent),
-                                                         data(std::make_unique<NodeData>()) {
+CCTNode<NodeData>::CCTNode(functionIdType id, CCTNode *parent) : functionId(id), parent(parent) {
 }
 
 template<class NodeData>
@@ -210,14 +209,7 @@ std::pair<CCTNode<NodeData> *, bool> CCTNode<NodeData>::tryEmplaceChild(function
 template<class NodeData>
 void CCTNode<NodeData>::merge(std::unique_ptr<CCTNode<NodeData>> &&other)
 {
-    if (other->data != nullptr) {
-        if (this->data == nullptr) {
-            this->data = std::forward<std::unique_ptr<NodeData>>(other->data);
-        } else {
-            this->data->merge(std::forward<std::unique_ptr<NodeData>>(other->data));
-        }
-        other->data = nullptr;
-    }
+    this->data.merge(std::move(other->data));
 
     for (auto &[_, node] : other->children) {
         if (node == nullptr) {
@@ -976,7 +968,7 @@ void CCTree<NodeData>::pruneSubtree_rec(CCTNode<NodeData> *root, const long long
             return false;
         }
         this->pruneSubtree_rec(child, threshold);
-        return child->children.empty() && child->data->getInvocationFrequency() < threshold;
+        return child->children.empty() && child->data.getInvocationFrequency() < threshold;
     });
 }
 
@@ -1093,7 +1085,7 @@ long long CCTree<NodeData>::getMaximumInvocations() {
     long long max = -1;
     for (auto it = this->begin(); it != this->end(); ++it) {
         auto* node = *it;
-        long long invocationFrequency = node->data->getInvocationFrequency();
+        long long invocationFrequency = node->data.getInvocationFrequency();
         if (invocationFrequency > max) {
             max = invocationFrequency;
         }
