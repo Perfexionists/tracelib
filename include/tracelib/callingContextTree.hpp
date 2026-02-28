@@ -706,7 +706,6 @@ public:
     PathToRootIterator pathToRootEnd() { return PathToRootIterator(nullptr); }
 
 protected:
-    void pruneSubtree_rec(CCTNode<NodeData> *root, const int long long threshold);
     /**
      * @brief prune a subtree from its leaves according to the specified threashold.
      * @param root the node representing the root of the subtree to prune
@@ -805,7 +804,7 @@ void CCTree<NodeData>::prune(const long long int threshold) {
     // Note: invalidate current node. It is assumed that the building of the tree is finished
     // The current node should not be removed by prunning since it is at the auxiliary root at the end.
     this->currentNode = nullptr;
-    this->pruneSubtree(this->root.get(), threshold);
+    this->pruneSubtree(this->getRootNode(), threshold);
 }
 
 template<class NodeData>
@@ -969,32 +968,17 @@ void CCTree<NodeData>::merge(CCTree<NodeData> &&other, nodeIdType rootNodeId, no
     }
 }
 
-template<class NodeData>
-void CCTree<NodeData>::pruneSubtree_rec(CCTNode<NodeData> *root, const long long int threshold) {
-    std::erase_if(root->children, [this, threshold](auto &item) {
-        auto &[_, child] = item;
-        if (child == nullptr) {
-            return false;
-        }
-        this->pruneSubtree_rec(child, threshold);
-        return child->children.empty() && child->data.getInvocationFrequency() < threshold;
-    });
-}
-
 /*
  * Prune the CHILDREN of root
  */
 template<class NodeData>
-void CCTree<NodeData>::pruneSubtree(CCTNode<NodeData> *root, const long long int threshold) {
-    if (root == nullptr) {
-        return;
-    }
-    this->pruneSubtree_rec(root, threshold);
-
-    auto parent = root->parent;
-    if (parent != nullptr) {
-        parent->eraseChild(root->functionId);
-    }
+void CCTree<NodeData>::pruneSubtree(nodeIdType root, const long long int threshold) {
+    std::erase_if(root->children, [this, threshold](auto &item) {
+        auto [_, childNodeId] = item;
+        this->pruneSubtree(childNodeId, threshold);
+        auto &child = this->getNode(childNodeId);
+        return child->children.empty() && child->data.getInvocationFrequency() < threshold;
+    });
 }
 
 template<class NodeData>
