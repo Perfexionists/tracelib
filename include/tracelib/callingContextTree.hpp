@@ -398,14 +398,15 @@ public:
      */
     class PreOrderIterator {
     private:
+        CCTree<NodeData> &tree;
         /**
          * @brief The node that is pointed to by the iterator.
          */
-        CCTNode<NodeData>* currentNode;
+        nodeIdType currentNode;
         /**
          * @brief Stack used for storing the nodes that are to be visited.
          */
-        std::stack<CCTNode<NodeData>*> stack;
+        std::stack<nodeIdType> stack;
     public:
         using iterator_category = std::forward_iterator_tag;
         using difference_type = std::ptrdiff_t;
@@ -413,24 +414,24 @@ public:
         using pointer = CCTNode<NodeData>*;
         using reference = CCTNode<NodeData>&;
 
-        explicit PreOrderIterator(CCTNode<NodeData>* node = nullptr) : currentNode(node) {
-            if (node != nullptr) {
+        explicit PreOrderIterator(CCTree<NodeData &tree, nodeIdType node = NULL_NODE_ID) : tree(tree), currentNode(node) {
+            if (node != NULL_NODE_ID) {
                 stack.push(node);
             }
         }
 
-        CCTNode<NodeData>* operator*() const { return currentNode; }
-        CCTNode<NodeData>* operator->() { return currentNode; }
+        CCTNode<NodeData>* operator*() const { return &tree.getNode(currentNode); }
+        CCTNode<NodeData>* operator->() { return &tree.getNode(currentNode); }
 
         PreOrderIterator& operator++() { // Prefix increment
             // Push children of current node on stack
-            CCTNode<NodeData>* node = stack.top();
+            nodeIdType nodeId = stack.top();
             stack.pop();
-            for (auto &[_, child] : node->children) {
+            for (auto &[_, child] : tree.getNode(nodeId).children) {
                 stack.emplace(child.get());
             }
             // Update current node
-            this->currentNode = stack.empty() ? nullptr : stack.top();
+            this->currentNode = stack.empty() ? NULL_NODE_ID : stack.top();
             return *this;
         }
         PreOrderIterator operator++(int) { // Postfix increment
