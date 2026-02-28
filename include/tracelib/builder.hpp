@@ -665,7 +665,7 @@ void EventProcessor<Graph>::handleBasicBlockExitEvent(CCTree<NodeData> *tree, st
         auto *backloggedEnterEvent = it->get();
         if (event->isComplementaryEvent(backloggedEnterEvent)) {
             foundTheEnterEventInBacklog = true;
-            auto *nodeToUpdate = tree->getCurrentNode();
+            auto *nodeToUpdate = &tree->getNode(tree->getCurrentNode());
 
             const auto &toUpdateName = tree->functionIdToName(nodeToUpdate->functionId);
             if (toUpdateName != event->name) {
@@ -674,7 +674,7 @@ void EventProcessor<Graph>::handleBasicBlockExitEvent(CCTree<NodeData> *tree, st
                 // needs to check also if the last event before this was function exit
                 auto [fId, wasFound] = tree->functionNameToId(event->name);
                 if (wasFound) {
-                    nodeToUpdate = nodeToUpdate->findChild(fId);
+                    nodeToUpdate = &tree->getNode(nodeToUpdate->findChild(fId));
                 }
                 // Note: If node was not found even with adjustment. It is likely that the function was not recognized at the RTN
                 // granularity and was not gathered. Thus, this basic block does not have a parent function and is skipped.

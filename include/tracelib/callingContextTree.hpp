@@ -95,9 +95,9 @@ public:
     /**
      * @brief Returns the child node with the specified function id.
      * @param childId a child node function id
-     * @return the child node with the specified function id
+     * @return the child node id with the specified function id
      */
-    CCTNode<NodeData>* findChild(functionIdType childId);
+    nodeIdType findChild(functionIdType childId);
 
     /**
      * @brief Returns the child node with the specified function id, insert new if not found.
@@ -189,9 +189,9 @@ void CCTNode<NodeData>::eraseChild(functionIdType childId) {
 }
 
 template<class NodeData>
-CCTNode<NodeData> * CCTNode<NodeData>::findChild(functionIdType childId) {
+nodeIdType CCTNode<NodeData>::findChild(functionIdType childId) {
     auto it = this->children.find(childId);
-    return it != this->children.end() ? it->second.get() : nullptr;
+    return it != this->children.end() ? it->second.get() : NULL_NODE_ID;
 }
 
 template<class NodeData>
