@@ -533,7 +533,7 @@ void EventProcessor<Graph>::handleFunctionEnterEvent(CCTree<NodeData> *tree, std
     // Search for the called function in the children of
     // the function node that represents the caller.
     auto fId = tree->functionNameToIdInsert(name);
-    auto [nodeId, _] = tree->tryEmplaceChild(tree->getCurrentNode(), fId);
+    auto [nodeId, _] = tree->tryEmplaceChild(tree->getCurrentNodeId(), fId);
     tree->setCurrentNode(nodeId);
 }
 
@@ -576,7 +576,7 @@ void EventProcessor<Graph>::handleFunctionExitEvent(CCTree<NodeData> *tree, std:
         auto *backloggedEnterEvent = it->get();
         if (event->isComplementaryEvent(backloggedEnterEvent)) {
             foundTheEnterEventInBacklog = true;
-            tree->getCurrentNode()->data.combine(std::forward<std::unique_ptr<Event>>(*it), std::forward<std::unique_ptr<Event>>(event));
+            tree->getNode(tree->getCurrentNodeId()).data.combine(std::forward<std::unique_ptr<Event>>(*it), std::forward<std::unique_ptr<Event>>(event));
             this->functionsBacklog.erase((it + 1).base());
             break;
         }
@@ -585,7 +585,7 @@ void EventProcessor<Graph>::handleFunctionExitEvent(CCTree<NodeData> *tree, std:
         std::cerr << "[W]: Could not find funcion entering event at function exit."
                 "Could not update the data in node!" << std::endl;
     }
-    tree->setCurrentNode(tree->getCurrentNode()->parent);
+    tree->setCurrentNode(tree->getNode(tree->getCurrentNodeId()).parent);
     event = nullptr;
 }
 
@@ -664,7 +664,7 @@ void EventProcessor<Graph>::handleBasicBlockExitEvent(CCTree<NodeData> *tree, st
         auto *backloggedEnterEvent = it->get();
         if (event->isComplementaryEvent(backloggedEnterEvent)) {
             foundTheEnterEventInBacklog = true;
-            auto *nodeToUpdate = &tree->getNode(tree->getCurrentNode());
+            auto *nodeToUpdate = &tree->getNode(tree->getCurrentNodeId());
 
             const auto &toUpdateName = tree->functionIdToName(nodeToUpdate->functionId);
             if (toUpdateName != event->name) {
@@ -824,10 +824,10 @@ void EventProcessor<Graph>::handleStackSampleEvent(CCTree<NodeData> *tree, std::
     tree->setCurrentNode(tree->getRootNode());
     for (auto functionName: event->stackSample) {
         auto fId = tree->functionNameToIdInsert(functionName);
-        auto [nodeId, _] = tree->tryEmplaceChild(tree->getCurrentNode(), fId);
+        auto [nodeId, _] = tree->tryEmplaceChild(tree->getCurrentNodeId(), fId);
         tree->setCurrentNode(nodeId);
     }
-    tree->getCurrentNode()->data.combine(std::forward<std::unique_ptr<Event>>(event), nullptr);
+    tree->getNode(tree->getCurrentNode()).data.combine(std::forward<std::unique_ptr<Event>>(event), nullptr);
 }
 
 template<IsSpecializedGraphType Graph>

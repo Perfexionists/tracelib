@@ -197,7 +197,7 @@ private:
      * and every event happening until a new function call or function returns is associated with this node.
      * It is used to build the tree based on the events.
      */
-    CCTNode<NodeData>* currentNode; // TODO
+    nodeIdType currentNode;
 
     struct TransparentStringHash {
         using is_transparent = void;
@@ -285,12 +285,12 @@ public:
      * @brief Retrieves the current node.
      * @return current node
      */
-    CCTNode<NodeData>* getCurrentNode();
+    nodeIdType getCurrentNodeId();
     /**
      * @brief Sets the current node.
      * @param node the new current node
      */
-    void setCurrentNode(CCTNode<NodeData>* node);
+    void setCurrentNodeId(nodeIdType node);
 
     /**
      * @brief Retrieves the root node of the tree.
@@ -754,7 +754,7 @@ private:
     template<class Archive>
     void load(Archive & ar, const unsigned int version) {
         this->nodes.clear();
-        this->currentNode = nullptr;
+        this->currentNode = NULL_NODE_ID;
         ar & BOOST_SERIALIZATION_NVP(nodes);
         ar & BOOST_SERIALIZATION_NVP(currentNode);
         ar & BOOST_SERIALIZATION_NVP(processName);
@@ -776,17 +776,17 @@ CCTree<NodeData>::CCTree() {
 template<class NodeData>
 CCTree<NodeData>::~CCTree() {
     this->nodes.clear();
-    this->currentNode = nullptr;
+    this->currentNode = NULL_NODE_ID;
 }
 
 template<class NodeData>
-CCTNode<NodeData>* CCTree<NodeData>::getCurrentNode() {
+nodeIdType CCTree<NodeData>::getCurrentNodeId() {
     return this->currentNode;
 }
 
 template<class NodeData>
-void CCTree<NodeData>::setCurrentNode(CCTNode<NodeData> *node) {
-    this->currentNode = node;
+void CCTree<NodeData>::setCurrentNodeId(nodeIdType nodeId) {
+    this->currentNode = nodeId;
 }
 
 template<class NodeData>
@@ -803,7 +803,7 @@ template<class NodeData>
 void CCTree<NodeData>::prune(const long long int threshold) {
     // Note: invalidate current node. It is assumed that the building of the tree is finished
     // The current node should not be removed by prunning since it is at the auxiliary root at the end.
-    this->currentNode = nullptr;
+    this->currentNode = NULL_NODE_ID;
     this->pruneSubtree(this->getRootNode(), threshold);
 }
 
