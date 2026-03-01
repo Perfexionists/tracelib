@@ -313,9 +313,8 @@ public:
     /**
      * @brief Merge other CCTree into the current one.
      */
-    void merge(CCTree<NodeData> &&other, nodeIdType rootNodeId      = AUXILIARY_ROOT_NODE_ID,
-                                         nodeIdType otherRootNodeId = AUXILIARY_ROOT_NODE_ID,
-                                         bool isNew = false);
+    void merge(CCTree<NodeData> &&other);
+    void merge(CCTree<NodeData> &other, nodeIdType rootNodeId, nodeIdType otherRootNodeId, bool isNew);
 
     /**
      * @brief Form string representation of the tree.
@@ -943,7 +942,12 @@ nodeIdType CCTree<NodeData>::emplaceChild(nodeIdType nodeId, functionIdType chil
 }
 
 template<class NodeData>
-void CCTree<NodeData>::merge(CCTree<NodeData> &&other, nodeIdType rootNodeId, nodeIdType otherRootNodeId, bool isNew) {
+void CCTree<NodeData>::merge(CCTree<NodeData> &&other) {
+    this->merge(other, AUXILIARY_ROOT_NODE_ID, AUXILIARY_ROOT_NODE_ID, false);
+}
+
+template<class NodeData>
+void CCTree<NodeData>::merge(CCTree<NodeData> &other, nodeIdType rootNodeId, nodeIdType otherRootNodeId, bool isNew) {
     for (auto [otherChildFId, otherChildNodeId] : other.getNode(otherRootNodeId).children) {
         auto remappedFunctionId = this->functionNameToIdInsert(other.functionIdToName(otherChildFId));
 
