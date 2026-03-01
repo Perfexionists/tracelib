@@ -1119,13 +1119,13 @@ void Builder<Graph>::deserialize(Graph* graph, const std::string &filePath,
 template<IsSpecializedGraphType Graph>
 void Builder<Graph>::serializeCCTreeToPerfFoldedFormat(std::ostream &outputStream, CCTree<NodeData> *treeToSerialize) {
     auto& tree = *treeToSerialize;
-    for (auto* node : tree) {
-        const long long int duration = node->data.getDuration();
+    for (auto [nodeId, nodePtr] : tree) {
+        const long long int duration = nodePtr->data.getDuration();
         if (duration <= 0) {
             continue;
         }
         std::stack<std::string> stack;
-        for (auto it = tree.pathToRootBegin(node); it != tree.pathToRootEnd(); ++it) {
+        for (auto it = tree.pathToRootBegin(nodeId); it != tree.pathToRootEnd(); ++it) {
             const auto &name = tree.functionIdToName(it->functionId);
             stack.emplace(name);
         }

@@ -365,9 +365,9 @@ public:
                 areEqual = false;
                 break;
             }
-            auto* node1 = *it1;
-            auto* node2 = *it2;
-            if (*node1 != *node2) {
+            const auto &[_1, node1] = *it1;
+            const auto &[_2, node2] = *it2;
+            if (node1 != node2) {
                 areEqual = false;
                 break;
             }
@@ -392,6 +392,7 @@ public:
 
 
     // Iterators
+    using nodePtrType = std::pair<nodeIdType, CCTNode<NodeData> *>;
     /**
      * @brief Iterator for traversing the tree in pre-order.
      */
@@ -419,8 +420,9 @@ public:
             }
         }
 
-        CCTNode<NodeData>* operator*() const { return &tree.getNode(currentNode); }
+        nodePtrType operator*() const { return { currentNode, &tree.getNode(currentNode) }; }
         CCTNode<NodeData>* operator->() { return &tree.getNode(currentNode); }
+
 
         PreOrderIterator& operator++() { // Prefix increment
             // Push children of current node on stack
@@ -496,7 +498,7 @@ public:
             }
         }
 
-        CCTNode<NodeData>* operator*() const { return &tree.getNode(currentNode); }
+        nodePtrType operator*() const { return { currentNode, &tree.getNode(currentNode) }; }
         CCTNode<NodeData>* operator->() { return &tree.getNode(currentNode); }
 
         PostOrderIterator& operator++() { // Prefix increment
@@ -543,7 +545,7 @@ public:
             this->currentNode = nodeId;
         }
 
-        CCTNode<NodeData>* operator*() const { return &tree.getNode(currentNode); }
+        nodePtrType operator*() const { return { currentNode, &tree.getNode(currentNode) }; }
         CCTNode<NodeData>* operator->() { return &tree.getNode(currentNode); }
 
         PathToRootIterator& operator++() { // Prefix increment
@@ -592,7 +594,7 @@ public:
             }
         }
 
-        CCTNode<NodeData>* operator*() const { return &tree.getNode(currentNode); }
+        nodePtrType operator*() const { return { currentNode, &tree.getNode(currentNode) }; }
         CCTNode<NodeData>* operator->() { return &tree.getNode(currentNode); }
 
         LevelOrderIterator& operator++() { // Prefix increment
