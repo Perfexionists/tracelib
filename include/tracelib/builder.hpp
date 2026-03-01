@@ -827,7 +827,7 @@ void EventProcessor<Graph>::handleStackSampleEvent(CCTree<NodeData> *tree, std::
         auto [nodeId, _] = tree->tryEmplaceChild(tree->getCurrentNodeId(), fId);
         tree->setCurrentNodeId(nodeId);
     }
-    tree->getNode(tree->getCurrentNode()).data.combine(std::forward<std::unique_ptr<Event>>(event), nullptr);
+    tree->getNode(tree->getCurrentNodeId()).data.combine(std::forward<std::unique_ptr<Event>>(event), nullptr);
 }
 
 template<IsSpecializedGraphType Graph>
