@@ -414,7 +414,7 @@ public:
         using pointer = CCTNode<NodeData>*;
         using reference = CCTNode<NodeData>&;
 
-        explicit PreOrderIterator(CCTree<NodeData &tree, nodeIdType node = NULL_NODE_ID) : tree(tree), currentNode(node) {
+        explicit PreOrderIterator(CCTree<NodeData> &tree, nodeIdType node) : tree(tree), currentNode(node) {
             if (node != NULL_NODE_ID) {
                 stack.push(node);
             }
@@ -428,7 +428,7 @@ public:
             nodeIdType nodeId = stack.top();
             stack.pop();
             for (auto &[_, childId] : tree.getNode(nodeId).children) {
-                stack.emplace(child);
+                stack.emplace(childId);
             }
             // Update current node
             this->currentNode = stack.empty() ? NULL_NODE_ID : stack.top();
@@ -490,7 +490,7 @@ public:
         using pointer = CCTNode<NodeData>*;
         using reference = CCTNode<NodeData>&;
 
-        explicit PostOrderIterator(CCTree<NodeData> &tree, nodeIdType nodeId = NULL_NODE_ID) : tree(tree), currentNode(nodeId) {
+        explicit PostOrderIterator(CCTree<NodeData> &tree, nodeIdType nodeId) : tree(tree), currentNode(nodeId) {
             if (nodeId != NULL_NODE_ID) {
                 stack.push(std::make_pair(nodeId, false));
                 exploreUntilLeftmostChild();
@@ -586,7 +586,7 @@ public:
         using pointer = CCTNode<NodeData>*;
         using reference = CCTNode<NodeData>&;
 
-        explicit LevelOrderIterator(CCTree<NodeData &tree, nodeIdType node = NULL_NODE_ID) : tree(tree), currentNode(node) {
+        explicit LevelOrderIterator(CCTree<NodeData> &tree, nodeIdType node) : tree(tree), currentNode(node) {
             this->currentNode = node;
             if (this->currentNode != NULL_NODE_ID) {
                 this->queue.push_back(this->currentNode);
@@ -626,7 +626,7 @@ public:
      * @brief The begining iterator for the tree starting in the root and moving forward in pre-order fashion.
      * @return The iterator pointing to the root of the tree.
      */
-    defaultIterator begin() { return defaultIterator(*this, this->getNode(AUXILIARY_ROOT_NODE_ID)); }
+    defaultIterator begin() { return defaultIterator(*this, AUXILIARY_ROOT_NODE_ID); }
     /**
      * @brief The begining iterator for the tree starting in the specified node and moving forward in pre-order fashion.
      * @param root the root of the (sub)tree to traverse
