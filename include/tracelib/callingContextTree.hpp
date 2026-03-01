@@ -932,7 +932,7 @@ std::pair<nodeIdType, bool> CCTree<NodeData>::tryEmplaceChild(nodeIdType nodeId,
     }
 
     auto newChildNodeId = this->emplaceNode(childFunctionId, nodeId);
-    node.addChild(childFunctionId, newChildNodeId);
+    this->getNode(nodeId).addChild(childFunctionId, newChildNodeId);
     return { newChildNodeId, true };
 }
 
