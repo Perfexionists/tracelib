@@ -766,6 +766,7 @@ private:
 
 template<class NodeData>
 CCTree<NodeData>::CCTree() {
+    this->nodes.reserve(1000000); // TODO Arbitrary, remove
     this->nodes.emplace_back(AUXILIARY_ROOT_FUNCTION_ID);
     this->functionNameToIdInsert(std::string{AUXILIARY_ROOT_NAME});
     this->currentNode = AUXILIARY_ROOT_NODE_ID;
