@@ -16,6 +16,7 @@
 #include <boost/serialization/split_member.hpp>
 #include <boost/serialization/export.hpp>
 #include <boost/serialization/unique_ptr.hpp>
+#include <boost/container/small_vector.hpp>
 #include <boost/container/flat_map.hpp>
 
 #include "utils.hpp"
@@ -60,7 +61,8 @@ public:
     /**
      * @brief The children of this node in a map where the key is nodes function name.
      */
-    boost::container::flat_map<functionIdType, nodeIdType> children;
+    using svType = boost::container::small_vector<std::pair<functionIdType, nodeIdType>, 4>;
+    boost::container::flat_map<functionIdType, nodeIdType, std::less<functionIdType>, svType> children;
 
     /**
      * @brief Creates an empty node.
