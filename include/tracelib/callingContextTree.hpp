@@ -1056,11 +1056,7 @@ bool CCTree<NodeData>::isEmpty() const {
 
 template<class NodeData>
 long long CCTree<NodeData>::getNumberOfNodes() {
-    long long cnt = 0;
-    for (auto it = this->levelOrderBegin(); it != this->levelOrderEnd(); ++it) {
-        ++cnt;
-    }
-    return cnt;
+    return this->nodes.size();
 }
 
 template<class NodeData>
