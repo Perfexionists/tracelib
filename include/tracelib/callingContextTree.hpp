@@ -226,14 +226,6 @@ public:
         return {val, true};
     }
 
-    functionIdType functionNameToIdInsert(const std::string &name) {
-        auto [it, wasNew] = functionNameToIdMap.try_emplace(name, functionIdToNameMap.size());
-        if (wasNew) {
-            functionIdToNameMap.emplace_back(name);
-        }
-        auto [_, val] = *it;
-        return val;
-    }
     functionIdType functionNameToIdInsert(std::string_view name) {
         if (auto search = functionNameToIdMap.find(name); search != functionNameToIdMap.end()) {
             return search->second;
@@ -768,7 +760,7 @@ template<class NodeData>
 CCTree<NodeData>::CCTree() {
     this->nodes.reserve(1000000); // TODO Arbitrary, remove
     this->nodes.emplace_back(AUXILIARY_ROOT_FUNCTION_ID);
-    this->functionNameToIdInsert(std::string{AUXILIARY_ROOT_NAME});
+    this->functionNameToIdInsert(AUXILIARY_ROOT_NAME);
     this->currentNode = AUXILIARY_ROOT_NODE_ID;
 }
 
