@@ -15,11 +15,11 @@ PerfFoldedEventData::PerfFoldedEventData(const long long int samples) : samples(
 }
 
 
-PerfFoldedEvent::PerfFoldedEvent(const Type type, std::string &&line, const std::string &name,
+PerfFoldedEvent::PerfFoldedEvent(const Type type, const std::string &name,
                                  const std::string &processName,
                                  const int tid, const int pid, const int ppid,
                                  std::unique_ptr<PerfFoldedEventData> &&data) :
-Event(type, name, processName, tid, pid, ppid), line(std::move(line)), data(std::forward<std::unique_ptr<PerfFoldedEventData>>(data)){
+Event(type, name, processName, tid, pid, ppid), data(std::forward<std::unique_ptr<PerfFoldedEventData>>(data)){
 
 }
 
@@ -107,7 +107,7 @@ std::unique_ptr<Event> PerfFoldedParser::getNextEvent() {
     }
 
     // TODO This implementation forbids spaces in function names.
-    auto event = std::make_unique<PerfFoldedEvent>(Event::STACK_SAMPLE, "", "");
+    auto event = std::make_unique<PerfFoldedEvent>(Event::STACK_SAMPLE, "");
 
     bool expecting_function = true;
     bool first_function = true;
