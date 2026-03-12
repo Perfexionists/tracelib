@@ -16,6 +16,8 @@
 #include <boost/serialization/split_member.hpp>
 #include <boost/serialization/export.hpp>
 #include <boost/serialization/unique_ptr.hpp>
+#include <boost/container/small_vector.hpp>
+#include <boost/container/flat_map.hpp>
 
 #include "utils.hpp"
 
@@ -59,7 +61,8 @@ public:
     /**
      * @brief The children of this node in a map where the key is nodes function name.
      */
-    std::unordered_map<functionIdType, nodeIdType> children = {};
+    using svType = boost::container::small_vector<std::pair<functionIdType, nodeIdType>, 4>;
+    boost::container::flat_map<functionIdType, nodeIdType, std::less<functionIdType>, svType> children;
 
     /**
      * @brief Creates an empty node.
@@ -920,13 +923,12 @@ nodeIdType CCTree<NodeData>::emplaceNode(functionIdType fId, nodeIdType parentId
 template<class NodeData>
 std::pair<nodeIdType, bool> CCTree<NodeData>::tryEmplaceChild(nodeIdType nodeId, functionIdType childFunctionId) {
     auto &node = this->getNode(nodeId);
-    if (auto child = node.children.find(childFunctionId); child != node.children.end()) {
-        return { child->second, false };
+    auto newNodeId = this->nodes.size(); // TODO sketchy
+    auto [childIt, wasNew] = node.children.try_emplace(childFunctionId, newNodeId);
+    if (wasNew) {
+        this->emplaceNode(childFunctionId, nodeId);
     }
-
-    auto newChildNodeId = this->emplaceNode(childFunctionId, nodeId);
-    this->getNode(nodeId).addChild(childFunctionId, newChildNodeId);
-    return { newChildNodeId, true };
+    return { childIt->second, wasNew };
 }
 
 template<class NodeData>
