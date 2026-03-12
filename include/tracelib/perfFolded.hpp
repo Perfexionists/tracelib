@@ -78,6 +78,14 @@ public:
      * Caller is responsible for deleting the event.
      */
     std::unique_ptr<Event> getNextEvent() override;
+
+private:
+    /*
+     * @brief Read the input file until either of the characters from the string "; \n" or EOF are found.
+     * @return A pair of the string_view, excluding the delimiter found (valid until the next call after this function returns the \n delim),
+     * and the delimiter character found. On error, the delim is 0.
+     */
+    std::pair<std::string_view, char> read_until_delim();
 };
 
 // CCT node

@@ -46,8 +46,12 @@ void PerfFoldedParser::parseMetadata() {
     Parser::parseMetadata();
 }
 
+std::pair<std::string_view, char> read_until_delim() {
+}
+
 std::unique_ptr<Event> PerfFoldedParser::getNextEvent() {
-    // Check if we reached the end position
+    // TODO Can do better than tellg. And also maybe wrong
+    // Check if we reached the end position.
     if (this->endPos != std::ifstream::pos_type(-1)) {
         auto currentPos = traceFile.tellg();
         if (endPos <= currentPos && currentPos != std::ifstream::pos_type(-1)) {
@@ -56,60 +60,56 @@ std::unique_ptr<Event> PerfFoldedParser::getNextEvent() {
         }
     }
 
-    // Retrieve a line from the file
-    std::string currentLine;
-    if (!std::getline(this->traceFile, currentLine)) {
-        this->currentLine = nullptr;
-        return nullptr;
-    }
-    this->currentLine = &currentLine;
-    if (currentLine.find_first_not_of(" \t\n\v\f\r") == std::string::npos) {
-        return std::forward<std::unique_ptr<Event>>(this->getNextEvent());
-    }
-    ++this->numberOfEvents;
+    // TODO Ignoring currentLine: this->currentLine = &currentLine;
 
-    // Parse the line
-    size_t pos;
-    if ( (pos = currentLine.find(' ')) == std::string::npos ) {
-        std::cerr << "[E]: Unexpected format of trace file!" << std::endl;
-        exit(1);
-    }
-    unsigned long long sampleCnt;
-    auto res = std::from_chars(currentLine.data() + pos + 1,
-                               currentLine.data() + currentLine.size(),
-                               sampleCnt);
-    if (res.ec != std::errc{} || res.ptr != currentLine.data() + currentLine.size()) {
-        std::cerr << "[E]: Unexpected format of trace file!" << std::endl;
-        exit(1);
-    }
-    auto stackSampleSV = (std::string_view{currentLine}).substr(0, pos);
+    // TODO This implementation forbids spaces in function names.
+    auto event = std::make_unique<PerfFoldedEvent>(Event::STACK_SAMPLE, "");
 
-    if ( (pos = stackSampleSV.find(';')) == std::string_view::npos ) {
-        std::cerr << "[E]: Unexpected format of trace file!" << std::endl;
-        exit(1);
-    }
-    auto event = std::make_unique<PerfFoldedEvent>(Event::STACK_SAMPLE, std::move(currentLine), "");
-    event->data = std::make_unique<PerfFoldedEventData>(sampleCnt);
+    bool first_function = true;
+    do {
+        auto [sv, delim] = this->read_until_delim();
+        bool expecting_function = true;
+        if (delim == ' ') {
+            expecting_function = false;
+        } else if (delim != ';') {
+            if (delim == '\n') {
+                return std::forward<std::unique_ptr<Event>>(this->getNextEvent());
+            } else if (delim == EOF && sv.empty()) {
+                return nullptr;
+            }
+            std::cerr << "[E]: Unexpected format of trace file!" << std::endl;
+            exit(1);
+        }
 
-    event->processName = stackSampleSV.substr(0, pos);
-    stackSampleSV = stackSampleSV.substr(pos + 1);
-
-    event->pid = processNameToProcessIdMap.try_emplace(event->processName, processNameToProcessIdMap.size() + 1).first->second;
-
-    while ((pos = stackSampleSV.find(';')) != std::string_view::npos) {
-        event->stackSample.push_back(stackSampleSV.substr(0, pos));
-        stackSampleSV = stackSampleSV.substr(pos + 1);
-    }
-    if (!stackSampleSV.empty()) {
-        event->stackSample.push_back(stackSampleSV);
-    }
-
+        if (first_function) {
+            event->processName = std::move(sv);
+            event->pid = processNameToProcessIdMap.try_emplace(event->processName, processNameToProcessIdMap.size() + 1).first->second;
+            first_function = false;
+        } else {
+            event->stackSample.emplace_back(std::move(sv));
+        }
+    } while (expecting_function);
     if (event->stackSample.empty()) {
         std::cerr << "[E]: Unexpected format of trace file!" << std::endl;
         exit(1);
     }
     event->name = event->stackSample.back();
 
+    auto [sv, delim] = this->read_until_delim();
+    if (delim != '\n' && delim != EOF) { // TODO This makes DOS newline invalid
+        std::cerr << "[E]: Unexpected format of trace file!" << std::endl;
+        exit(1);
+    }
+
+    unsigned long long sampleCnt;
+    auto res = std::from_chars(sv.data(), sv.data() + sv.size(), sampleCnt);
+    if (res.ec != std::errc{} || res.ptr != sv.data() + sv.size()) {
+        std::cerr << "[E]: Unexpected format of trace file!" << std::endl;
+        exit(1);
+    }
+
+    event->data = std::make_unique<PerfFoldedEventData>(sampleCnt);
+    ++this->numberOfEvents;
     return event;
 }
 
