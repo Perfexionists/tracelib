@@ -25,7 +25,8 @@ find_package(nlohmann_json REQUIRED)
 
 # Add library target
 add_library(${PROJECT_NAME} SHARED)
-target_compile_options(${PROJECT_NAME} PRIVATE -Wno-unused-parameter -flto=auto -g -Wall -Wextra -O2 -fno-omit-frame-pointer -fno-optimize-sibling-calls)
+target_compile_definitions(${PROJECT_NAME} PRIVATE NDEBUG)
+target_compile_options(${PROJECT_NAME} PRIVATE -Wno-unused-parameter -flto=auto -g -Wall -Wextra -O3 -fno-omit-frame-pointer -fno-optimize-sibling-calls)
 target_sources(${PROJECT_NAME} PRIVATE
     ${SRC_DIR}/event.cpp
     ${SRC_DIR}/parser.cpp
@@ -41,6 +42,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 set_target_properties(${PROJECT_NAME} PROPERTIES
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION_MAJOR}
+        INTERPROCEDURAL_OPTIMIZATION TRUE
 )
 target_link_libraries(${PROJECT_NAME} PRIVATE
         Boost::serialization
