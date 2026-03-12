@@ -1,6 +1,10 @@
 #include <iostream>
 #include <sstream>
 #include <charconv>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
 
 #include "tracelib/event.hpp"
 #include "tracelib/perfFolded.hpp"
@@ -36,9 +40,39 @@ std::string PerfFoldedEvent::toString() {
 // Parser
 PerfFoldedParser::PerfFoldedParser(const std::string &traceFilePath, const std::string& metadataFilePath,
                                    std::ifstream::pos_type startPos, std::ifstream::pos_type endPos)
-                                   : Parser(traceFilePath, metadataFilePath, startPos, endPos) {
-    if (this->charBeforeStart != '\n') {
-        this->traceFile.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                                   : Parser("", metadataFilePath, startPos, endPos) {
+    if ((this->traceFileFd = ::open(traceFilePath.data(), O_RDONLY)) == -1) {
+        std::cerr << "[E]: Couldn't open file " << this->traceFilePath << "!" << std::endl;
+    }
+    struct stat sb;
+    if (::fstat(this->traceFileFd, &sb) == -1) {
+        std::cerr << "[E]: Couldn't fstat trace file!" << std::endl;
+    }
+    this->traceFileLength = sb.st_size;
+    if (::posix_fadvise(this->traceFileFd, 0, 0, POSIX_FADV_SEQUENTIAL) == -1) { // TODO offset and length?
+        std::cerr << "[E]: Couldn't fadvise trace file!" << std::endl;
+    }
+    if ((this->traceFilePtr = ::mmap(nullptr, this->traceFileLength, PROT_READ, MAP_PRIVATE, this->traceFileFd, 0)) == nullptr) { // TODO also offset and length?
+        std::cerr << "[E]: Couldn't mmap trace file!" << std::endl;
+    }
+    if (::madvise(this->traceFilePtr, this->traceFileLength, MADV_SEQUENTIAL) == -1) {
+        std::cerr << "[E]: Couldn't madvise trace file!" << std::endl;
+    }
+
+    this->traceFileEnd = static_cast<char *>(this->traceFilePtr) + this->traceFileLength;
+    this->endPtr = static_cast<char *>(this->traceFilePtr) + endPos;
+    this->traceFileCurrent = static_cast<char *>(this->traceFilePtr) + startPos;
+    if (startPos != 0 && this->traceFileCurrent[-1] != '\n') {
+        while (this->readUntilDelim().second != '\n') {}
+    }
+}
+
+PerfFoldedParser::~PerfFoldedParser() {
+    if (::munmap(this->traceFilePtr, this->traceFileLength) == -1) {
+        std::cerr << "[E]: Couldn't close trace file!" << std::endl;
+    }
+    if (::close(this->traceFileFd) == -1) {
+        std::cerr << "[E]: Couldn't close trace file!" << std::endl;
     }
 }
 
@@ -46,29 +80,42 @@ void PerfFoldedParser::parseMetadata() {
     Parser::parseMetadata();
 }
 
-std::pair<std::string_view, char> read_until_delim() {
+std::pair<std::string_view, char> PerfFoldedParser::readUntilDelim() {
+    const char *start = this->traceFileCurrent;
+
+    std::string_view::size_type length = 0;
+    while (this->traceFileCurrent < this->traceFileEnd) {
+        char current = *(this->traceFileCurrent++);
+        switch (current) {
+            case ';': // Fall through
+            case ' ': // Fall through
+            case '\n':
+                ++this->traceFileCurrent;
+                return std::pair{ std::string_view{ start, length }, current };
+            default:
+                break; // Do nothing
+        }
+        ++length;
+    }
+    return std::pair{ std::string_view{}, '\0' };
 }
 
 std::unique_ptr<Event> PerfFoldedParser::getNextEvent() {
-    // TODO Can do better than tellg. And also maybe wrong
     // Check if we reached the end position.
-    if (this->endPos != std::ifstream::pos_type(-1)) {
-        auto currentPos = traceFile.tellg();
-        if (endPos <= currentPos && currentPos != std::ifstream::pos_type(-1)) {
-            this->currentLine = nullptr;
-            return nullptr;
-        }
+    if (this->endPtr <= this->traceFileCurrent && this->endPtr != nullptr) {
+        this->currentLine = nullptr;
+        return nullptr;
     }
 
     // TODO Ignoring currentLine: this->currentLine = &currentLine;
 
     // TODO This implementation forbids spaces in function names.
-    auto event = std::make_unique<PerfFoldedEvent>(Event::STACK_SAMPLE, "");
+    auto event = std::make_unique<PerfFoldedEvent>(Event::STACK_SAMPLE, "", "");
 
+    bool expecting_function = true;
     bool first_function = true;
     do {
-        auto [sv, delim] = this->read_until_delim();
-        bool expecting_function = true;
+        auto [sv, delim] = this->readUntilDelim();
         if (delim == ' ') {
             expecting_function = false;
         } else if (delim != ';') {
@@ -95,7 +142,7 @@ std::unique_ptr<Event> PerfFoldedParser::getNextEvent() {
     }
     event->name = event->stackSample.back();
 
-    auto [sv, delim] = this->read_until_delim();
+    auto [sv, delim] = this->readUntilDelim();
     if (delim != '\n' && delim != EOF) { // TODO This makes DOS newline invalid
         std::cerr << "[E]: Unexpected format of trace file!" << std::endl;
         exit(1);

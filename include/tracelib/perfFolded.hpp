@@ -65,6 +65,8 @@ public:
     explicit PerfFoldedParser (const std::string &traceFilePath, const std::string &metadataFilePath = "",
                                std::ifstream::pos_type startPos = 0,
                                std::ifstream::pos_type endPos = std::ifstream::pos_type(-1));
+    PerfFoldedParser (const PerfFoldedParser &) = delete;
+    ~PerfFoldedParser() override;
 
     /**
      * @brief Parse metadata into json object. The perf folded format does not expect any metadata.
@@ -85,7 +87,14 @@ private:
      * @return A pair of the string_view, excluding the delimiter found (valid until the next call after this function returns the \n delim),
      * and the delimiter character found. On error, the delim is 0.
      */
-    std::pair<std::string_view, char> read_until_delim();
+    std::pair<std::string_view, char> readUntilDelim();
+
+    int traceFileFd = -1;
+    void *traceFilePtr = nullptr;
+    char *traceFileCurrent = nullptr;
+    char *traceFileEnd = nullptr;
+    size_t traceFileLength = 0;
+    char *endPtr = nullptr;
 };
 
 // CCT node
