@@ -103,11 +103,8 @@ std::pair<std::string_view, char> PerfFoldedParser::readUntilDelim() {
 std::unique_ptr<Event> PerfFoldedParser::getNextEvent() {
     // Check if we reached the end position.
     if (this->endPtr <= this->traceFileCurrent && this->endPtr != nullptr) {
-        this->currentLine = nullptr;
         return nullptr;
     }
-
-    // TODO Ignoring currentLine: this->currentLine = &currentLine;
 
     // TODO This implementation forbids spaces in function names.
     auto event = std::make_unique<PerfFoldedEvent>(Event::STACK_SAMPLE, "", "");

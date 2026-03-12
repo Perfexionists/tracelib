@@ -50,10 +50,8 @@ std::unique_ptr<Event> PerunPinParser::getNextEvent() {
     // Retrieve a line from the file
     std::string currentLine;
     if (!std::getline(this->traceFile, currentLine)) {
-        this->currentLine = nullptr;
         return nullptr;
     }
-    this->currentLine = &currentLine;
     if (currentLine.empty() or currentLine.find_first_not_of(" \t\n\v\f\r") == std::string::npos) {
         return this->getNextEvent();
     }
