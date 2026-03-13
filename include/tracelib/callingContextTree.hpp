@@ -212,14 +212,6 @@ private:
     std::vector<std::string> functionIdToNameMap;
 
 public:
-    std::pair<functionIdType, bool> functionNameToId(const std::string &name) const {
-        auto it = functionNameToIdMap.find(name);
-        if (it == functionNameToIdMap.end()) {
-            return {0, false};
-        }
-        auto [_, val] = *it;
-        return {val, true};
-    }
     std::pair<functionIdType, bool> functionNameToId(std::string_view name) const {
         auto it = functionNameToIdMap.find(name);
         if (it == functionNameToIdMap.end()) {
