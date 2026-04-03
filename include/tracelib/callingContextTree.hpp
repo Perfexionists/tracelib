@@ -202,14 +202,8 @@ private:
      */
     nodeIdType currentNode;
 
-    struct TransparentStringHash {
-        using is_transparent = void;
-        size_t operator()(std::string_view sv) const noexcept {
-            return std::hash<std::string_view>{}(sv);
-        }
-    };
-    std::unordered_map<std::string, functionIdType, TransparentStringHash, std::equal_to<>> functionNameToIdMap;
-    std::vector<std::string> functionIdToNameMap;
+    std::unordered_map<std::string_view, functionIdType> functionNameToIdMap;
+    std::vector<std::string_view> functionIdToNameMap;
 
 public:
     std::pair<functionIdType, bool> functionNameToId(std::string_view name) const {
@@ -225,12 +219,12 @@ public:
         if (auto search = functionNameToIdMap.find(name); search != functionNameToIdMap.end()) {
             return search->second;
         }
-        auto [it, _] = functionNameToIdMap.emplace(std::string(name), functionIdToNameMap.size());
+        auto [it, _] = functionNameToIdMap.emplace(name, functionIdToNameMap.size());
         functionIdToNameMap.emplace_back(name);
         return it->second;
     }
 
-    const std::string &functionIdToName(functionIdType id) const {
+    const std::string_view &functionIdToName(functionIdType id) const {
         return functionIdToNameMap.at(id);
     }
 
@@ -726,8 +720,8 @@ private:
         ar & BOOST_SERIALIZATION_NVP(processName);
         ar & BOOST_SERIALIZATION_NVP(pid);
         ar & BOOST_SERIALIZATION_NVP(tid);
-        ar & BOOST_SERIALIZATION_NVP(functionNameToIdMap);
-        ar & BOOST_SERIALIZATION_NVP(functionIdToNameMap);
+        // ar & BOOST_SERIALIZATION_NVP(functionNameToIdMap); TODO string_views are invalid
+        // ar & BOOST_SERIALIZATION_NVP(functionIdToNameMap); TODO string_views are invalid
     }
 
     /**
@@ -745,8 +739,8 @@ private:
         ar & BOOST_SERIALIZATION_NVP(processName);
         ar & BOOST_SERIALIZATION_NVP(pid);
         ar & BOOST_SERIALIZATION_NVP(tid);
-        ar & BOOST_SERIALIZATION_NVP(functionNameToIdMap);
-        ar & BOOST_SERIALIZATION_NVP(functionIdToNameMap);
+        // ar & BOOST_SERIALIZATION_NVP(functionNameToIdMap); TODO string_views are invalid
+        // ar & BOOST_SERIALIZATION_NVP(functionIdToNameMap); TODO string_views are invalid
     }
     BOOST_SERIALIZATION_SPLIT_MEMBER() // Allows to split default serialization function into save and load functions
 };
@@ -1357,7 +1351,7 @@ long long CCForest<NodeData>::getNumberOfNodes() {
 
 template<class NodeData>
 long long CCForest<NodeData>::getNumberOfFunctions() {
-    std::unordered_set<std::string> uniqueFunctionNames = {};
+    std::unordered_set<std::string_view> uniqueFunctionNames = {};
     for (const auto&[_, tree] : forestMap) {
         for (const auto &name : tree->functionIdToNameMap) {
             uniqueFunctionNames.insert(name);
