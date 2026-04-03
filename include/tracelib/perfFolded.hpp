@@ -60,7 +60,7 @@ public:
      */
     std::unordered_map<std::string, int> processNameToProcessIdMap;
 
-    explicit PerfFoldedParser (const std::string &traceFilePath, const std::string &metadataFilePath = "",
+    explicit PerfFoldedParser (const ParTraceHandle &handle,
                                std::ifstream::pos_type startPos = 0,
                                std::ifstream::pos_type endPos = std::ifstream::pos_type(-1));
     PerfFoldedParser (const PerfFoldedParser &) = delete;
@@ -87,11 +87,8 @@ private:
      */
     std::pair<std::string_view, char> readUntilDelim();
 
-    int traceFileFd = -1;
-    void *traceFilePtr = nullptr;
     char *traceFileCurrent = nullptr;
     char *traceFileEnd = nullptr;
-    size_t traceFileLength = 0;
     char *endPtr = nullptr;
 };
 

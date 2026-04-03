@@ -1194,6 +1194,7 @@ class ParTraceHandle {
         }
 
         size_t getFileSize() const { return this->traceFileLength; }
+        char *getDataPtr() { return static_cast<char *>(this->traceFilePtr); }
 };
 
 static void parBuild(const ParTraceHandle &handle, int threadCount, int threadIndex,

@@ -38,42 +38,18 @@ std::string PerfFoldedEvent::toString() {
 }
 
 // Parser
-PerfFoldedParser::PerfFoldedParser(const std::string &traceFilePath, const std::string& metadataFilePath,
+PerfFoldedParser::PerfFoldedParser(const ParTraceHandle &handle,
                                    std::ifstream::pos_type startPos, std::ifstream::pos_type endPos)
-                                   : Parser("", metadataFilePath, startPos, endPos) {
-    if ((this->traceFileFd = ::open(traceFilePath.data(), O_RDONLY)) == -1) {
-        std::cerr << "[E]: Couldn't open file " << this->traceFilePath << "!" << std::endl;
-    }
-    struct stat sb;
-    if (::fstat(this->traceFileFd, &sb) == -1) {
-        std::cerr << "[E]: Couldn't fstat trace file!" << std::endl;
-    }
-    this->traceFileLength = sb.st_size;
-    if (::posix_fadvise(this->traceFileFd, 0, 0, POSIX_FADV_SEQUENTIAL) == -1) { // TODO offset and length?
-        std::cerr << "[E]: Couldn't fadvise trace file!" << std::endl;
-    }
-    if ((this->traceFilePtr = ::mmap(nullptr, this->traceFileLength, PROT_READ, MAP_PRIVATE, this->traceFileFd, 0)) == nullptr) { // TODO also offset and length?
-        std::cerr << "[E]: Couldn't mmap trace file!" << std::endl;
-    }
-    if (::madvise(this->traceFilePtr, this->traceFileLength, MADV_SEQUENTIAL) == -1) {
-        std::cerr << "[E]: Couldn't madvise trace file!" << std::endl;
-    }
-
-    this->traceFileEnd = static_cast<char *>(this->traceFilePtr) + this->traceFileLength;
-    this->endPtr = static_cast<char *>(this->traceFilePtr) + endPos;
-    this->traceFileCurrent = static_cast<char *>(this->traceFilePtr) + startPos;
+                                   : Parser("", "", startPos, endPos) {
+    this->traceFileEnd = handle.getDataPtr() + handle.getFileSize();
+    this->endPtr = handle.getDataPtr() + endPos;
+    this->traceFileCurrent = handle.getDataPtr() + startPos;
     if (startPos != 0 && this->traceFileCurrent[-1] != '\n') {
         while (this->readUntilDelim().second != '\n') {}
     }
 }
 
 PerfFoldedParser::~PerfFoldedParser() {
-    if (::munmap(this->traceFilePtr, this->traceFileLength) == -1) {
-        std::cerr << "[E]: Couldn't close trace file!" << std::endl;
-    }
-    if (::close(this->traceFileFd) == -1) {
-        std::cerr << "[E]: Couldn't close trace file!" << std::endl;
-    }
 }
 
 void PerfFoldedParser::parseMetadata() {
