@@ -1157,30 +1157,6 @@ void Builder<Graph>::serializeCCTreeToPerfFoldedFormat(std::ostream &outputStrea
 
 #include <thread>
 
-// TODO implemented?
-static std::ifstream::pos_type gFileSize(const std::string &traceFilePath) {
-    std::ifstream traceFile(traceFilePath, std::ifstream::ate);
-    if (!traceFile.is_open()) {
-        std::cerr << "[E]: Couldn't open file " << traceFilePath << "!" << std::endl;
-        exit(1);
-    }
-    auto fileSize = traceFile.tellg();
-    if (fileSize == std::ifstream::pos_type(-1)) {
-        std::cerr << "[E]: Couldn't tell size of file " << traceFilePath << "!" << std::endl;
-        exit(1);
-    }
-    return fileSize;
-}
-
-static void parBuild(const std::string &traceFilePath,
-                     std::ifstream::pos_type startPos, std::ifstream::pos_type endPos,
-                     CCTree<PerfFoldedNodeData> *out) {
-    auto parser = PerfFoldedParser(traceFilePath, "", startPos, endPos);
-    auto builder = Builder<CCTree<PerfFoldedNodeData>>();
-
-    builder.build(out, &parser);
-}
-
 class ParTraceHandle {
     private:
         int traceFileFd = -1;
@@ -1216,7 +1192,19 @@ class ParTraceHandle {
                 std::cerr << "[E]: Couldn't close trace file!" << std::endl;
             }
         }
+
+        size_t getFileSize() const { return this->traceFileLength; }
 };
+
+static void parBuild(const ParTraceHandle &handle, int threadCount, int threadIndex,
+                     CCTree<PerfFoldedNodeData> *out) {
+    auto parser = PerfFoldedParser(handle,
+                                   (handle.getFileSize() *  threadIndex     ) / threadCount,
+                                   (handle.getFileSize() * (threadIndex + 1)) / threadCount);
+    auto builder = Builder<CCTree<PerfFoldedNodeData>>();
+
+    builder.build(out, &parser);
+}
 
 CCTree<PerfFoldedNodeData> buildParCCT(const std::string &traceFilePath, int threadCount) {
     auto traceFileHandle = ParTraceHandle(traceFilePath);
@@ -1224,8 +1212,7 @@ CCTree<PerfFoldedNodeData> buildParCCT(const std::string &traceFilePath, int thr
     std::vector<CCTree<PerfFoldedNodeData>> trees(threadCount);
     std::vector<std::thread> threads;
     for (int i = 0; i < threadCount; ++i) {
-        threads.emplace_back(parBuild, traceFilePath, (fileSize * i) / threadCount,
-                             (fileSize * (i + 1)) / threadCount, &trees[i]);
+        threads.emplace_back(parBuild, traceFileHandle, threadCount, i, &trees[i]);
     }
 
     for (auto &thread : threads) {
