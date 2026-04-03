@@ -38,7 +38,7 @@ std::string PerfFoldedEvent::toString() {
 }
 
 // Parser
-PerfFoldedParser::PerfFoldedParser(const ParTraceHandle &handle,
+PerfFoldedParser::PerfFoldedParser(ParTraceHandle &handle,
                                    std::ifstream::pos_type startPos, std::ifstream::pos_type endPos)
                                    : Parser("", "", startPos, endPos) {
     this->traceFileEnd = handle.getDataPtr() + handle.getFileSize();

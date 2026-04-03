@@ -1373,4 +1373,5 @@ long long CCForest<NodeData>::getMaximumInvocations() {
 }
 
 
+
 #endif // CCT_HPP

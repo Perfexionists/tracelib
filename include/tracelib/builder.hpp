@@ -6,6 +6,7 @@
 #include "event.hpp"
 #include "callingContextTree.hpp"
 #include "callGraph.hpp"
+#include "utils.hpp"
 #include <system_error>
 #include <cerrno>
 #include <fcntl.h>
@@ -1153,55 +1154,14 @@ void Builder<Graph>::serializeCCTreeToPerfFoldedFormat(std::ostream &outputStrea
 }
 
 
-// TODO Move into more appropriate location / class
 
 #include <thread>
 
-class ParTraceHandle {
-    private:
-        int traceFileFd = -1;
-        size_t traceFileLength = 0;
-        void *traceFilePtr = nullptr;
-
-    public:
-        ParTraceHandle(const std::string &traceFilePath) {
-            if ((this->traceFileFd = ::open(traceFilePath.data(), O_RDONLY)) == -1) {
-                throw std::system_error(errno, std::generic_category(), "open");
-            }
-            struct stat sb;
-            if (::fstat(this->traceFileFd, &sb) == -1) {
-                throw std::system_error(errno, std::generic_category(), "fstat");
-            }
-            this->traceFileLength = sb.st_size;
-            if (::posix_fadvise(this->traceFileFd, 0, 0, POSIX_FADV_SEQUENTIAL) == -1) { // TODO offset and length?
-                throw std::system_error(errno, std::generic_category(), "posix_fadvise");
-            }
-            if ((this->traceFilePtr = ::mmap(nullptr, this->traceFileLength, PROT_READ, MAP_PRIVATE, this->traceFileFd, 0)) == nullptr) { // TODO also offset and length?
-                throw std::system_error(errno, std::generic_category(), "mmap");
-            }
-            if (::madvise(this->traceFilePtr, this->traceFileLength, MADV_SEQUENTIAL) == -1) {
-                throw std::system_error(errno, std::generic_category(), "madvise");
-            }
-        }
-
-        ~ParTraceHandle() {
-            if (::munmap(this->traceFilePtr, this->traceFileLength) == -1) {
-                std::cerr << "[E]: Couldn't close trace file!" << std::endl;
-            }
-            if (::close(this->traceFileFd) == -1) {
-                std::cerr << "[E]: Couldn't close trace file!" << std::endl;
-            }
-        }
-
-        size_t getFileSize() const { return this->traceFileLength; }
-        char *getDataPtr() { return static_cast<char *>(this->traceFilePtr); }
-};
-
-static void parBuild(const ParTraceHandle &handle, int threadCount, int threadIndex,
+static void parBuild(ParTraceHandle *handle, int threadCount, int threadIndex,
                      CCTree<PerfFoldedNodeData> *out) {
-    auto parser = PerfFoldedParser(handle,
-                                   (handle.getFileSize() *  threadIndex     ) / threadCount,
-                                   (handle.getFileSize() * (threadIndex + 1)) / threadCount);
+    auto parser = PerfFoldedParser(*handle,
+                                   (handle->getFileSize() *  threadIndex     ) / threadCount,
+                                   (handle->getFileSize() * (threadIndex + 1)) / threadCount);
     auto builder = Builder<CCTree<PerfFoldedNodeData>>();
 
     builder.build(out, &parser);
@@ -1213,7 +1173,7 @@ CCTree<PerfFoldedNodeData> buildParCCT(const std::string &traceFilePath, int thr
     std::vector<CCTree<PerfFoldedNodeData>> trees(threadCount);
     std::vector<std::thread> threads;
     for (int i = 0; i < threadCount; ++i) {
-        threads.emplace_back(parBuild, traceFileHandle, threadCount, i, &trees[i]);
+        threads.emplace_back(parBuild, &traceFileHandle, threadCount, i, &trees[i]);
     }
 
     for (auto &thread : threads) {
@@ -1241,5 +1201,7 @@ CCTree<PerfFoldedNodeData> buildParCCT(const std::string &traceFilePath, int thr
 
     return std::move(trees[0]);
 }
+
+
 
 #endif //BUILDER_HPP

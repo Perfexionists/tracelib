@@ -7,6 +7,7 @@
 #include "nodeData.hpp"
 #include "parser.hpp"
 #include "event.hpp"
+#include "utils.hpp"
 
 // Event
 /**
@@ -60,7 +61,7 @@ public:
      */
     std::unordered_map<std::string, int> processNameToProcessIdMap;
 
-    explicit PerfFoldedParser (const ParTraceHandle &handle,
+    explicit PerfFoldedParser (ParTraceHandle &handle,
                                std::ifstream::pos_type startPos = 0,
                                std::ifstream::pos_type endPos = std::ifstream::pos_type(-1));
     PerfFoldedParser (const PerfFoldedParser &) = delete;

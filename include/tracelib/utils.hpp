@@ -9,6 +9,12 @@
 #include <unordered_map>
 #include <vector>
 #include <filesystem>
+#include <system_error>
+#include <cerrno>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
 
 /**
  * @brief Forms a human readable string out of size in bytes.
@@ -138,6 +144,59 @@ std::ostream& operator<<(std::ostream& os, const Operation<TreeNode>& op) {
     os << op.toString();
     return os;
 }
+
+
+
+class ParTraceHandle {
+    private:
+        int traceFileFd = -1;
+        size_t traceFileLength = 0;
+        void *traceFilePtr = nullptr;
+
+    public:
+        ParTraceHandle(const std::string &traceFilePath) {
+            if ((this->traceFileFd = ::open(traceFilePath.data(), O_RDONLY)) == -1) {
+                throw std::system_error(errno, std::generic_category(), "open");
+            }
+            struct stat sb;
+            if (::fstat(this->traceFileFd, &sb) == -1) {
+                throw std::system_error(errno, std::generic_category(), "fstat");
+            }
+            this->traceFileLength = sb.st_size;
+            if (::posix_fadvise(this->traceFileFd, 0, 0, POSIX_FADV_SEQUENTIAL) == -1) { // TODO offset and length?
+                throw std::system_error(errno, std::generic_category(), "posix_fadvise");
+            }
+            if ((this->traceFilePtr = ::mmap(nullptr, this->traceFileLength, PROT_READ, MAP_PRIVATE, this->traceFileFd, 0)) == nullptr) { // TODO also offset and length?
+                throw std::system_error(errno, std::generic_category(), "mmap");
+            }
+            if (::madvise(this->traceFilePtr, this->traceFileLength, MADV_SEQUENTIAL) == -1) {
+                throw std::system_error(errno, std::generic_category(), "madvise");
+            }
+        }
+
+        ~ParTraceHandle() {
+            if (this->traceFilePtr != nullptr &&
+                ::munmap(this->traceFilePtr, this->traceFileLength) == -1) {
+                std::cerr << "[E]: Couldn't close trace file!" << std::endl;
+            }
+            if (this->traceFileFd != -1 && ::close(this->traceFileFd) == -1) {
+                std::cerr << "[E]: Couldn't close trace file!" << std::endl;
+            }
+        }
+
+        ParTraceHandle(const ParTraceHandle &) = delete;
+        ParTraceHandle(ParTraceHandle &&other) {
+            this->traceFileFd = other.traceFileFd;
+            this->traceFilePtr = other.traceFilePtr;
+            other.traceFileFd = -1;
+            other.traceFilePtr = nullptr;
+        }
+
+        size_t getFileSize() const { return this->traceFileLength; }
+        char *getDataPtr() { return static_cast<char *>(this->traceFilePtr); }
+};
+
+
 
 
 #endif //UTILS_HPP
