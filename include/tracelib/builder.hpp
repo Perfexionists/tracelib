@@ -673,8 +673,7 @@ void EventProcessor<Graph>::handleBasicBlockExitEvent(CCTree<NodeData> *tree, st
             foundTheEnterEventInBacklog = true;
             auto *nodeToUpdate = &tree->getNode(tree->getCurrentNodeId());
 
-            const auto &toUpdateName = tree->functionIdToName(nodeToUpdate->functionId);
-            if (toUpdateName != event->name) {
+            if (nodeToUpdate->functionName != event->name) {
                 // The function exited sooner than the last basic block
                 // TODO: this won't handle recursive calls
                 // needs to check also if the last event before this was function exit
@@ -1133,8 +1132,7 @@ void Builder<Graph>::serializeCCTreeToPerfFoldedFormat(std::ostream &outputStrea
         }
         std::stack<std::string> stack;
         for (auto it = tree.pathToRootBegin(nodeId); it != tree.pathToRootEnd(); ++it) {
-            const auto &name = tree.functionIdToName(it->functionId);
-            stack.emplace(name);
+            stack.emplace(it->functionName);
         }
         if (!tree.processName.empty()) {
             stack.push(tree.processName);

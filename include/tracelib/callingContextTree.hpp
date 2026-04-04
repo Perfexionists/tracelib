@@ -47,6 +47,7 @@ public:
      * The name ".ROOT" is reserved for the auxiliary root of the CCT structure.
      */
     functionIdType functionId;
+    std::string_view functionName;
 
     /**
      * @brief The node data should be an instance of class derived from NodeData class.
@@ -924,7 +925,7 @@ void CCTree<NodeData>::merge(CCTree<NodeData> &&other) {
 template<class NodeData>
 void CCTree<NodeData>::merge(CCTree<NodeData> &other, nodeIdType rootNodeId, nodeIdType otherRootNodeId, bool isNew) {
     for (auto [otherChildFId, otherChildNodeId] : other.getNode(otherRootNodeId).children) {
-        auto remappedFunctionId = this->functionNameToIdInsert(other.functionIdToName(otherChildFId));
+        auto remappedFunctionId = this->functionNameToIdInsert(other.getNode(otherChildFId).functionName);
 
         auto [childNodeId, wasNew] = isNew ? std::pair{ this->emplaceChild(rootNodeId, remappedFunctionId), true } :
                                              this->tryEmplaceChild(rootNodeId, remappedFunctionId);
@@ -1010,7 +1011,7 @@ std::string CCTree<NodeData>::toString() const {
         }
 
         const auto &currentNode = this->getNode(currentNodeId);
-        sstream << offset << this->functionIdToName(currentNode.functionId) << "\n";
+        sstream << offset << currentNode.functionName << "\n";
 
         stack.emplace(NULL_NODE_ID);
         offset += " | ";
