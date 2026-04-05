@@ -13,7 +13,7 @@ args:
   - 16
 
 workloads:
-  - parBuild ./profiling/samples/big.perf-folded
+  - 8 parBuild ./profiling/samples/big.perf-folded # FIXME Patch, because perun is ignoring the args for some reason
 
 collectors:
   - name: time
