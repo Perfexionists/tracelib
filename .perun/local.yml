@@ -1,24 +1,33 @@
 vcs:
-  type: git #svs
+  type: git
   url: /home/drvlado/Work/RedHat/tracelib/tracelib
 
 cmds:
   - ./build/profiling/programs/generic/generic
 
-args:
-  - 1
-  - 2
-  - 4
-  - 8
-  - 16
+#args:
+#  - 1
+#  - 2
+#  - 4
+#  - 8
+#  - 16
 
 workloads:
   - 8 parBuild ./profiling/samples/big.perf-folded # FIXME Patch, because perun is ignoring the args for some reason
 
 collectors:
   - name: time
-  # - name: trace TODO
-  # TODO custom perf?
+#  - name: trace
+#    params:
+#      strategy: userspace
+#      engine: ebpf
+#  # TODO custom perf?
+
+#postprocessors:
+#  - name: regression_analysis
+#    params:
+#      method: full
+#      steps: 10
 
 ## The following contains the ordered list of postprocess phases that are executed after collection.
 ## Uncomment and edit the following region (!order matters!):
@@ -40,6 +49,15 @@ profiles:
 format:
   sort_profiles_by: [time, stem, copy]
   sort_profiles_order: asc
+
+# TODO ?
+#degradation:
+#  apply: all
+#  strategies:
+#    - type: mixed
+#      postprocessor: regression_analysis
+#      method: bmoe
+#    - method: aat
 
 ## The following options control the degradation checks in repository
 # degradation: TODO
