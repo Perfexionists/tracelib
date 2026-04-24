@@ -61,6 +61,9 @@ private:
     std::unordered_map<int, int> tidToProcessMap{};
 
 
+    std::vector<std::string_view> prevStackSample{};
+    std::vector<nodeIdType> prevNodeIds{};
+
     // Helper values to normalize pid and tid in events to the value of first event
     // necessary for building singular tree from traces that contain multiple tids and pids
     /**
@@ -828,11 +831,21 @@ void EventProcessor<Graph>::handleThreadExitEvent(CCGraph<NodeData> *graph, std:
 template<IsSpecializedGraphType Graph>
 void EventProcessor<Graph>::handleStackSampleEvent(CCTree<NodeData> *tree, std::unique_ptr<Event> &&event) {
     tree->setCurrentNodeId(AUXILIARY_ROOT_NODE_ID);
+
+    size_t i = 0;
+    this->prevNodeIds.resize(event->stackSample.size());
     for (auto functionName: event->stackSample) {
-        auto [fName, fId] = tree->functionNameToIdInsert(functionName);
-        auto [nodeId, _] = tree->tryEmplaceChild(tree->getCurrentNodeId(), fId, fName);
-        tree->setCurrentNodeId(nodeId);
+        nodeIdType nodeId;
+        if (i >= this->prevStackSample.size() || functionName != this->prevStackSample[i]) {
+            auto [fName, fId] = tree->functionNameToIdInsert(functionName);
+            auto [nodeId, _] = tree->tryEmplaceChild(tree->getCurrentNodeId(), fId, fName);
+            this->prevNodeIds[i] = std::move(nodeId);
+        }
+        tree->setCurrentNodeId(this->prevNodeIds[i]);
+        ++i;
     }
+
+    this->prevStackSample = std::move(event->stackSample);
     tree->getNode(tree->getCurrentNodeId()).data.combine(std::forward<std::unique_ptr<Event>>(event), nullptr);
 }
 
