@@ -38,37 +38,62 @@ class CCTree;
  * defined by the NodeData class to be implemented on the data field.
  */
 template<class NodeData>
-class CCTNode {
-public:
-    using valueType = NodeData;
-
+class CCTNodes {
+private:
     /**
      * @brief The node is identified by the function id mapping to a name in the CCTree.
      * The name ".ROOT" is reserved for the auxiliary root of the CCT structure.
      */
-    functionIdType functionId;
-    std::string_view functionName;
+    std::vector<functionIdType> functionIds;
+    std::vector<std::string_view> functionNames;
 
     /**
      * @brief The node data should be an instance of class derived from NodeData class.
      */
-    NodeData data;
+    std::vector<NodeData> data;
 
     /**
      * @brief The parent node of this node.
      */
-    nodeIdType parent = NULL_NODE_ID;
+    std::vector<nodeIdType> parents = NULL_NODE_ID;
 
     /**
      * @brief The children of this node in a map where the key is nodes function name.
      */
     using svType = boost::container::small_vector<std::pair<functionIdType, nodeIdType>, 4>;
-    boost::container::flat_map<functionIdType, nodeIdType, std::less<functionIdType>, svType> children;
+    std::vector<boost::container::flat_map<functionIdType, nodeIdType, std::less<functionIdType>, svType>> children;
+
+public:
+    using valueType = NodeData;
+
+    functionIdType   getNodeFunctionId(  nodeIdType id) const { return this->functionIds[id]; }
+    std::string_view getNodeFunctionName(nodeIdType id) const { return this->functionNames[id]; }
+    NodeData         getNodeData(        nodeIdType id) const { return this->data[id]; }
+    nodeIdType       getNodeParent(      nodeIdType id) const { return this->parents[id]; }
+    nodeIdType       getNodeChild(       nodeIdType id, functionIdType childFunctionId) const {
+        auto map = this->children[id];
+        auto it = map.find(childFunctionId);
+        return it != map.end() ? it->second : NULL_NODE_ID;
+    }
+    void             addNodeChild(       nodeIdType id, functionIdType childFId, nodeIdType childNId) const {
+        this->children[id].emplace(childFId, childNId);
+    }
+
+    /**
+     * @brief Comparison of nodes that is checking only the function id and is allows missmatched NodeData types.
+     * @tparam U the type of the other node
+     * @param other the other node
+     * @return true if the nodes have the same function id
+     */
+    bool getNodesEqual(nodeIdType a, nodeIdType b) const {
+        return this->getNodeFunctionId(a) == this->getNodeFunctionId(b);
+    }
+
 
     /**
      * @brief Creates an empty node.
      */
-    CCTNode() = default;
+    CCTNodes() = default;
 
     /**
      * @brief Creates a node with specified function name and optionally a parent pointer. The node
@@ -76,54 +101,12 @@ public:
      * @param name the function name for the new node
      * @param parent parent node of the node
      */
-    explicit CCTNode(functionIdType id, std::string_view fname, nodeIdType parent = NULL_NODE_ID);
+    explicit CCTNodes(functionIdType id, std::string_view fname, nodeIdType parent = NULL_NODE_ID) : functionId(id), functionName(fname), parent(parent) {}
 
     /**
      * @brief Destructor. Deallocates the node data and all its children.
      */
-    ~CCTNode();
-
-    /**
-     * @brief Adds the specified child node to the children of this node.
-     * @param child a new child node
-     */
-    void addChild(functionIdType fId, nodeIdType nodeId);
-
-    /**
-     * @brief Removes the specified child node by its function id from the children of this node. The node
-     * is deallocated as well.
-     * @param childId a child node function id
-     */
-    void eraseChild(functionIdType childId);
-
-    /**
-     * @brief Returns the child node with the specified function id.
-     * @param childId a child node function id
-     * @return the child node id with the specified function id
-     */
-    nodeIdType findChild(functionIdType childId);
-
-    /**
-     * @brief Comparison of nodes that is checking only the function id and is allows missmatched NodeData types.
-     * @tparam U the type of the other node
-     * @param other the other node
-     * @return true if the nodes ahve the same function id
-     */
-    template <typename U>
-    bool operator==(CCTNode<U>& other) {
-        return this->functionId == other.functionId;
-    }
-
-    /**
-     * @brief Comparison of nodes that is checking only the function id and is allows missmatched NodeData types.
-     * @tparam U the type of the other node
-     * @param other the other node
-     * @return true if the nodes have different function ids
-     */
-    template <typename U>
-    bool operator!=(CCTNode<U>& other) {
-        return this->functionId != other.functionId;
-    }
+    ~CCTNodes() = default;
 
 private:
     friend class boost::serialization::access;
@@ -136,9 +119,9 @@ private:
      */
     template<class Archive>
     void save(Archive & ar, const unsigned int version) const {
-        ar & BOOST_SERIALIZATION_NVP(functionId);
+        ar & BOOST_SERIALIZATION_NVP(functionIds);
         ar & BOOST_SERIALIZATION_NVP(data);
-        ar & BOOST_SERIALIZATION_NVP(parent);
+        ar & BOOST_SERIALIZATION_NVP(parents);
         ar & BOOST_SERIALIZATION_NVP(children);
     }
 
@@ -150,37 +133,13 @@ private:
      */
     template<class Archive>
     void load(Archive & ar, const unsigned int version) {
-        ar & BOOST_SERIALIZATION_NVP(functionId);
+        ar & BOOST_SERIALIZATION_NVP(functionIds);
         ar & BOOST_SERIALIZATION_NVP(data);
-        ar & BOOST_SERIALIZATION_NVP(parent);
+        ar & BOOST_SERIALIZATION_NVP(parents);
         ar & BOOST_SERIALIZATION_NVP(children);
     }
     BOOST_SERIALIZATION_SPLIT_MEMBER() // Allows to split default serialization function into save and load functions
 };
-
-template<class NodeData>
-CCTNode<NodeData>::CCTNode(functionIdType id, std::string_view fname, nodeIdType parent) : functionId(id), functionName(fname), parent(parent) {
-}
-
-template<class NodeData>
-CCTNode<NodeData>::~CCTNode() {
-}
-
-template<class NodeData>
-void CCTNode<NodeData>::addChild(functionIdType fId, nodeIdType nodeId) {
-    this->children.emplace(fId, nodeId);
-}
-
-template<class NodeData>
-void CCTNode<NodeData>::eraseChild(functionIdType childId) {
-    this->children.erase(childId);
-}
-
-template<class NodeData>
-nodeIdType CCTNode<NodeData>::findChild(functionIdType childId) {
-    auto it = this->children.find(childId);
-    return it != this->children.end() ? it->second : NULL_NODE_ID;
-}
 
 
 /**
@@ -191,11 +150,6 @@ nodeIdType CCTNode<NodeData>::findChild(functionIdType childId) {
 template <class NodeData>
 class CCTree {
 private:
-    /**
-     * @brief The nodes of the tree.
-     * By default the first node is always an auxiliary root node with function name ".ROOT".
-     */
-    std::vector<CCTNode<NodeData>> nodes;
     /**
      * @brief The node which represents the currently "executed" function. The function call was encountered
      * and every event happening until a new function call or function returns is associated with this node.
@@ -223,12 +177,11 @@ public:
         return *it;
     }
 
-    const CCTNode<NodeData> &getNode(nodeIdType nodeId) const {
-        return this->nodes[nodeId];
-    }
-    CCTNode<NodeData> &getNode(nodeIdType nodeId) {
-        return this->nodes[nodeId];
-    }
+    /**
+     * @brief The nodes of the tree.
+     * By default the first node is always an auxiliary root node with function name ".ROOT".
+     */
+    CCTNodes<NodeData> nodes;
 
     using valueType = NodeData;
 
