@@ -229,7 +229,7 @@ public:
      * @param threshold the threshold value of occurrence frequency for functions in their contexts
      */
     void prune(long long int threshold);
-    std::pair<int, std::vector<Operation<CCTNode<NodeData>>>> treeEditDistance(CCTree<NodeData>& other);
+    std::pair<int, std::vector<Operation<nodeIdType>>> treeEditDistance(CCTree<NodeData>& other);
 
     nodeIdType emplaceNode(functionIdType fId, std::string_view fName, nodeIdType parentId);
 
@@ -697,7 +697,7 @@ void CCTree<NodeData>::prune(const long long int threshold) {
 }
 
 template<class NodeData>
-std::pair<int, std::vector<Operation<CCTNode<NodeData>>>> CCTree<NodeData>::treeEditDistance(CCTree<NodeData> &other) {
+std::pair<int, std::vector<Operation<nodeIdType>>> CCTree<NodeData>::treeEditDistance(CCTree<NodeData> &other) {
     /**
      * This method implements the Zhang-sasha tree edit distnace algorithm
      * from following article https://dl.acm.org/doi/abs/10.1145/1133255.1134012.
@@ -715,14 +715,14 @@ std::pair<int, std::vector<Operation<CCTNode<NodeData>>>> CCTree<NodeData>::tree
     std::unique_ptr<TreeInfo> otherTreeInfo = other.getTreeInfo();
 
     std::vector<std::vector<int>> treeDistance(thisTreeInfo->nodesCnt, std::vector<int>(otherTreeInfo->nodesCnt, 0));
-    std::vector<std::vector<std::vector<Operation<CCTNode<NodeData>>>>> operations(thisTreeInfo->nodesCnt, std::vector<std::vector<Operation<CCTNode<NodeData>>>>(otherTreeInfo->nodesCnt));
+    std::vector<std::vector<std::vector<Operation<nodeIdType>>>> operations(thisTreeInfo->nodesCnt, std::vector<std::vector<Operation<nodeIdType>>>(otherTreeInfo->nodesCnt));
 
     for (int i : thisTreeInfo->keyRoots) {
         for (int j : otherTreeInfo->keyRoots) {
             int m = i - thisTreeInfo->leftMostDescendants[i] + 2;
             int n = j - otherTreeInfo->leftMostDescendants[j] + 2;
             std::vector fd(m, std::vector(n, 0));
-            std::vector partialOperations(m, std::vector(n, std::vector<Operation<CCTNode<NodeData>>>()));
+            std::vector partialOperations(m, std::vector(n, std::vector<Operation<nodeIdType>>()));
 
             int ioff = thisTreeInfo->leftMostDescendants[i] - 1;
             int joff = otherTreeInfo->leftMostDescendants[j] - 1;
@@ -731,14 +731,14 @@ std::pair<int, std::vector<Operation<CCTNode<NodeData>>>> CCTree<NodeData>::tree
                 auto node = thisTreeInfo->postOrderNodes[x + ioff];
                 fd[x][0] = fd[x - 1][0] + removeCost(node);
                 partialOperations[x][0] = partialOperations[x - 1][0];
-                partialOperations[x][0].emplace_back(Operation<CCTNode<NodeData>>::REMOVE, node);
+                partialOperations[x][0].emplace_back(Operation<nodeIdType>::REMOVE, node);
             }
 
             for (int y = 1; y < n; ++y) {
                 auto node = otherTreeInfo->postOrderNodes[y + joff];
                 fd[0][y] = fd[0][y - 1] + insertCost(node);
                 partialOperations[0][y] = partialOperations[0][y - 1];
-                partialOperations[0][y].emplace_back(Operation<CCTNode<NodeData>>::INSERT, nullptr, node);
+                partialOperations[0][y].emplace_back(Operation<nodeIdType>::INSERT, NULL_NODE_ID, node);
             }
 
             for (int x = 1; x < m; ++x) {
@@ -766,14 +766,14 @@ std::pair<int, std::vector<Operation<CCTNode<NodeData>>>> CCTree<NodeData>::tree
 
                         if (minIndex == 0) {
                             partialOperations[x][y] = partialOperations[x - 1][y];
-                            partialOperations[x][y].emplace_back(Operation<CCTNode<NodeData>>::REMOVE, node1);
+                            partialOperations[x][y].emplace_back(Operation<nodeIdType>::REMOVE, node1, NULL_NODE_ID);
                         } else if (minIndex == 1) {
                             partialOperations[x][y] = partialOperations[x][y - 1];
-                            partialOperations[x][y].emplace_back(Operation<CCTNode<NodeData>>::INSERT, nullptr, node2);
+                            partialOperations[x][y].emplace_back(Operation<nodeIdType>::INSERT, NULL_NODE_ID, node2);
                         } else {
-                            typename Operation<CCTNode<NodeData>>::Type op_type = (fd[x][y] == fd[x - 1][y - 1])
-                                                                             ? Operation<CCTNode<NodeData>>::MATCH
-                                                                             : Operation<CCTNode<NodeData>>::UPDATE;
+                            typename Operation<nodeIdType>::Type op_type = (fd[x][y] == fd[x - 1][y - 1])
+                                                                             ? Operation<nodeIdType>::MATCH
+                                                                             : Operation<nodeIdType>::UPDATE;
                             partialOperations[x][y] = partialOperations[x - 1][y - 1];
                             partialOperations[x][y].emplace_back(op_type, node1, node2);
                         }
@@ -799,10 +799,10 @@ std::pair<int, std::vector<Operation<CCTNode<NodeData>>>> CCTree<NodeData>::tree
 
                         if (min_index == 0) {
                             partialOperations[x][y] = partialOperations[x - 1][y];
-                            partialOperations[x][y].emplace_back(Operation<CCTNode<NodeData>>::REMOVE, node1);
+                            partialOperations[x][y].emplace_back(Operation<nodeIdType>::REMOVE, node1, NULL_NODE_ID);
                         } else if (min_index == 1) {
                             partialOperations[x][y] = partialOperations[x][y - 1];
-                            partialOperations[x][y].emplace_back(Operation<CCTNode<NodeData>>::INSERT, nullptr, node2);
+                            partialOperations[x][y].emplace_back(Operation<nodeIdType>::INSERT, NULL_NODE_ID, node2);
                         } else {
                             partialOperations[x][y] = partialOperations[p][q];
                             partialOperations[x][y].insert(partialOperations[x][y].end(),
