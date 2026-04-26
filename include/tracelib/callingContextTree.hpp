@@ -488,11 +488,6 @@ public:
          */
         std::deque<nodeIdType> queue;
     public:
-        using iterator_category = std::forward_iterator_tag;
-        using difference_type = std::ptrdiff_t;
-        using value_type = CCTNode<NodeData>;
-        using pointer = CCTNode<NodeData>*;
-        using reference = CCTNode<NodeData>&;
 
         explicit LevelOrderIterator(CCTree<NodeData> &tree, nodeIdType node) : tree(tree), currentNode(node) {
             this->currentNode = node;
@@ -502,17 +497,16 @@ public:
         }
 
         nodeIdType operator*() const { return currentNode; }
-        CCTNode<NodeData>* operator->() { return &tree.getNode(currentNode); }
 
         LevelOrderIterator& operator++() { // Prefix increment
             if (this->queue.empty()) {
                 this->currentNode = NULL_NODE_ID;
                 return *this;
             }
-            auto &node = this->tree.getNode(this->queue.front());
+            nodeId = this->queue.front();
             this->queue.pop_front();
             // Add children to the queue
-            for (auto& [_, childId] : node.children) {
+            for (auto& [_, childId] : tree.getNodeChildren(nodeId)) {
                 this->queue.push_back(childId);
             }
             // Update the current node
