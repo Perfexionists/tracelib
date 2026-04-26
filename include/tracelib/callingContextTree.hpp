@@ -55,7 +55,7 @@ private:
     /**
      * @brief The parent node of this node.
      */
-    std::vector<nodeIdType> parents = NULL_NODE_ID;
+    std::vector<nodeIdType> parents;
 
     /**
      * @brief The children of this node in a map where the key is nodes function name.
@@ -79,6 +79,14 @@ public:
         this->children[id].emplace(childFId, childNId);
     }
     nodeIdType size() const { return this->data.size(); }
+    void emplace_back(functionIdType fId, std::string_view fName, nodeIdType parentId) {
+        this->functionIds.emplace_back(fId);
+        this->functionNames.emplace_back(fName);
+        this->parents.emplace_back(parentId);
+
+        this->data.resize(this->functionIds.size());
+        this->children.resize(this->functionIds.size());
+    }
 
     /**
      * @brief Comparison of nodes that is checking only the function id and is allows missmatched NodeData types.
@@ -95,7 +103,7 @@ public:
         this->functionIds.reserve(1000000);
         this->functionNames.reserve(1000000);
         this->data.reserve(1000000);
-        this->NULL_NODE_ID.reserve(1000000);
+        this->parents.reserve(1000000);
         this->children.reserve(1000000);
     }
     ~CCTNodes() = default;
