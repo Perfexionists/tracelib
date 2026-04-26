@@ -388,9 +388,9 @@ public:
             while (!this->stack.empty()) {
                 auto [nodeId, visited] = this->stack.top();
                 if (!visited) {
-                    auto &node = tree.getNode(nodeId);
+                    auto &children = tree.getNodeChildren(nodeId);
                     visited = true;
-                    for (auto it = node.children.rbegin(); it != node.children.rend(); ++it) {
+                    for (auto it = children.rbegin(); it != children.rend(); ++it) {
                         auto childId = it->second;
                         if (childId != NULL_NODE_ID) {
                             this->stack.push({childId, false});
@@ -404,11 +404,6 @@ public:
             this->currentNode = NULL_NODE_ID;
         }
     public:
-        using iterator_category = std::forward_iterator_tag;
-        using difference_type = std::ptrdiff_t;
-        using value_type = CCTNode<NodeData>*;
-        using pointer = CCTNode<NodeData>*;
-        using reference = CCTNode<NodeData>&;
 
         explicit PostOrderIterator(CCTree<NodeData> &tree, nodeIdType nodeId) : tree(tree), currentNode(nodeId) {
             if (nodeId != NULL_NODE_ID) {
@@ -418,7 +413,6 @@ public:
         }
 
         nodeIdType operator*() const { return currentNode; }
-        CCTNode<NodeData>* operator->() { return &tree.getNode(currentNode); }
 
         PostOrderIterator& operator++() { // Prefix increment
             if (this->stack.empty()) {
