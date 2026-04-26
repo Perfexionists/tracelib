@@ -877,12 +877,12 @@ void CCTree<NodeData>::pruneSubtree(nodeIdType root, const long long int thresho
 template<class NodeData>
 std::unique_ptr<typename CCTree<NodeData>::TreeInfo> CCTree<NodeData>::getTreeInfo() {
     std::map<int, int> keyRootsMap{};
-    std::map<CCTNode<NodeData>*, int> leftMostDescendantsMap{};
+    std::map<nodeIdType, int> leftMostDescendantsMap{};
     auto treeInfo = std::make_unique<TreeInfo>();
 
     int index = 0;
     for (auto it = this->postOrderBegin(); it != this->postOrderEnd(); ++it) {
-        auto *node = *it;
+        auto node = *it;
         treeInfo->nodesCnt += 1;
         treeInfo->postOrderNodes.push_back(node);
 
@@ -890,8 +890,8 @@ std::unique_ptr<typename CCTree<NodeData>::TreeInfo> CCTree<NodeData>::getTreeIn
         if (it->children.empty()) { // Is leaf
             leftMostDescendantIndexOfCurrentNode = index;
             // Propagate the information about lefmost node to its parents that do not already have leftmost node
-            for (auto backIt = this->pathToRootBegin(node->parent); backIt != this->pathToRootEnd(); ++backIt) {
-                auto *predecessorNode = *backIt;
+            for (auto backIt = this->pathToRootBegin(this->getNodeParent(node)); backIt != this->pathToRootEnd(); ++backIt) {
+                auto predecessorNode = *backIt;
                 auto [_, wasInserted] = leftMostDescendantsMap.emplace(predecessorNode,
                                                                        leftMostDescendantIndexOfCurrentNode);
                 if (!wasInserted) {
