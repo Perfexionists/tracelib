@@ -495,7 +495,7 @@ public:
                 this->currentNode = NULL_NODE_ID;
                 return *this;
             }
-            nodeId = this->queue.front();
+            auto nodeId = this->queue.front();
             this->queue.pop_front();
             // Add children to the queue
             for (auto& [_, childId] : tree.getNodeChildren(nodeId)) {
@@ -840,13 +840,13 @@ void CCTree<NodeData>::merge(CCTree<NodeData> &&other) {
 
 template<class NodeData>
 void CCTree<NodeData>::merge(CCTree<NodeData> &other, nodeIdType rootNodeId, nodeIdType otherRootNodeId, bool isNew) {
-    for (auto [otherChildFId, otherChildNodeId] : other.getNode(otherRootNodeId).children) {
-        auto [remappedFunctionSv, remappedFunctionId] = this->functionNameToIdInsert(other.getNode(otherChildNodeId).functionName);
+    for (auto [otherChildFId, otherChildNodeId] : other.getNodeChildren(otherRootNodeId)) {
+        auto [remappedFunctionSv, remappedFunctionId] = this->functionNameToIdInsert(other.getNodeFunctionName(otherChildNodeId));
 
         auto [childNodeId, wasNew] = isNew ? std::pair{ this->emplaceChild(rootNodeId, remappedFunctionId, remappedFunctionSv), true } :
                                              this->tryEmplaceChild(rootNodeId, remappedFunctionId, remappedFunctionSv);
 
-        this->getNode(childNodeId).data.merge(std::move(other.getNode(otherChildNodeId).data));
+        this->getNodeDataRef(childNodeId).merge(std::move(other.getNodeDataRef(otherChildNodeId)));
         this->merge(other, childNodeId, otherChildNodeId, wasNew);
     }
 }
