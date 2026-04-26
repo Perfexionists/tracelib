@@ -833,13 +833,15 @@ void EventProcessor<Graph>::handleStackSampleEvent(CCTree<NodeData> *tree, std::
     tree->setCurrentNodeId(AUXILIARY_ROOT_NODE_ID);
 
     size_t i = 0;
+    bool foundDiff = false;
     this->prevNodeIds.resize(event->stackSample.size());
     for (auto functionName: event->stackSample) {
         nodeIdType nodeId;
-        if (i >= this->prevStackSample.size() || functionName != this->prevStackSample[i]) {
+        if (foundDiff || i >= this->prevStackSample.size() || functionName != this->prevStackSample[i]) {
             auto [fName, fId] = tree->functionNameToIdInsert(functionName);
             auto [nodeId, _] = tree->tryEmplaceChild(tree->getCurrentNodeId(), fId, fName);
             this->prevNodeIds[i] = std::move(nodeId);
+            foundDiff = true;
         }
         tree->setCurrentNodeId(this->prevNodeIds[i]);
         ++i;
