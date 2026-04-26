@@ -75,9 +75,10 @@ public:
         auto it = map.find(childFunctionId);
         return it != map.end() ? it->second : NULL_NODE_ID;
     }
-    void             addNodeChild(       nodeIdType id, functionIdType childFId, nodeIdType childNId) const {
+    void             addNodeChild(       nodeIdType id, functionIdType childFId, nodeIdType childNId) {
         this->children[id].emplace(childFId, childNId);
     }
+    nodeIdType size() const { return this->data.size(); }
 
     /**
      * @brief Comparison of nodes that is checking only the function id and is allows missmatched NodeData types.
@@ -89,23 +90,14 @@ public:
         return this->getNodeFunctionId(a) == this->getNodeFunctionId(b);
     }
 
-
-    /**
-     * @brief Creates an empty node.
-     */
-    CCTNodes() = default;
-
-    /**
-     * @brief Creates a node with specified function name and optionally a parent pointer. The node
-     * will have no children.
-     * @param name the function name for the new node
-     * @param parent parent node of the node
-     */
-    explicit CCTNodes(functionIdType id, std::string_view fname, nodeIdType parent = NULL_NODE_ID) : functionId(id), functionName(fname), parent(parent) {}
-
-    /**
-     * @brief Destructor. Deallocates the node data and all its children.
-     */
+    CCTNodes() {
+        // TODO Arbitrary, remove
+        this->functionIds.reserve(1000000);
+        this->functionNames.reserve(1000000);
+        this->data.reserve(1000000);
+        this->NULL_NODE_ID.reserve(1000000);
+        this->children.reserve(1000000);
+    }
     ~CCTNodes() = default;
 
 private:
@@ -665,7 +657,6 @@ private:
 
 template<class NodeData>
 CCTree<NodeData>::CCTree() {
-    this->nodes.reserve(1000000); // TODO Arbitrary, remove
     auto [rootNameSv, _] = this->functionNameToIdInsert(AUXILIARY_ROOT_NAME);
     this->emplaceNode(AUXILIARY_ROOT_FUNCTION_ID, rootNameSv, NULL_NODE_ID);
     this->currentNode = AUXILIARY_ROOT_NODE_ID;
@@ -673,7 +664,6 @@ CCTree<NodeData>::CCTree() {
 
 template<class NodeData>
 CCTree<NodeData>::~CCTree() {
-    this->nodes.clear();
     this->currentNode = NULL_NODE_ID;
 }
 
@@ -819,7 +809,7 @@ std::pair<int, std::vector<Operation<CCTNode<NodeData>>>> CCTree<NodeData>::tree
 
 template<class NodeData>
 nodeIdType CCTree<NodeData>::emplaceNode(functionIdType fId, std::string_view fName, nodeIdType parentId) {
-    nodeIdType id = this->nodes.size();
+    nodeIdType id = this->getNumberOfNodes();
     this->nodes.emplace_back(fId, fName, parentId);
     return id;
 }
@@ -827,7 +817,7 @@ nodeIdType CCTree<NodeData>::emplaceNode(functionIdType fId, std::string_view fN
 template<class NodeData>
 std::pair<nodeIdType, bool> CCTree<NodeData>::tryEmplaceChild(nodeIdType nodeId, functionIdType childFunctionId, std::string_view childFunctionName) {
     auto &node = this->getNode(nodeId);
-    auto newNodeId = this->nodes.size(); // TODO sketchy
+    auto newNodeId = this->getNumberOfNodes(); // TODO sketchy
     auto [childIt, wasNew] = node.children.try_emplace(childFunctionId, newNodeId);
     auto nId = childIt->second;
     if (wasNew) {
