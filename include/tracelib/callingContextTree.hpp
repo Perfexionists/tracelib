@@ -69,9 +69,12 @@ public:
     functionIdType   getNodeFunctionId(  nodeIdType id) const { return this->functionIds[id]; }
     std::string_view getNodeFunctionName(nodeIdType id) const { return this->functionNames[id]; }
     NodeData         getNodeData(        nodeIdType id) const { return this->data[id]; }
+    NodeData        &getNodeDataRef(     nodeIdType id)       { return this->data[id]; }
     nodeIdType       getNodeParent(      nodeIdType id) const { return this->parents[id]; }
+    const auto       getNodeChildren(    nodeIdType id) const { return this->children[id]; }
+    auto             getNodeChildren(    nodeIdType id)       { return this->children[id]; }
     nodeIdType       getNodeChild(       nodeIdType id, functionIdType childFunctionId) const {
-        auto map = this->children[id];
+        auto map = this->getNodeChildren(id);
         auto it = map.find(childFunctionId);
         return it != map.end() ? it->second : NULL_NODE_ID;
     }
@@ -824,9 +827,8 @@ nodeIdType CCTree<NodeData>::emplaceNode(functionIdType fId, std::string_view fN
 
 template<class NodeData>
 std::pair<nodeIdType, bool> CCTree<NodeData>::tryEmplaceChild(nodeIdType nodeId, functionIdType childFunctionId, std::string_view childFunctionName) {
-    auto &node = this->getNode(nodeId);
     auto newNodeId = this->getNumberOfNodes(); // TODO sketchy
-    auto [childIt, wasNew] = node.children.try_emplace(childFunctionId, newNodeId);
+    auto [childIt, wasNew] = this->nodes.getNodeChildren(nodeId).try_emplace(childFunctionId, newNodeId);
     auto nId = childIt->second;
     if (wasNew) {
         this->emplaceNode(childFunctionId, childFunctionName, nodeId);
@@ -837,7 +839,7 @@ std::pair<nodeIdType, bool> CCTree<NodeData>::tryEmplaceChild(nodeIdType nodeId,
 template<class NodeData>
 nodeIdType CCTree<NodeData>::emplaceChild(nodeIdType nodeId, functionIdType childFunctionId, std::string_view childFunctionName) {
     auto newChildNodeId = this->emplaceNode(childFunctionId, childFunctionName, nodeId);
-    this->getNode(nodeId).addChild(childFunctionId, newChildNodeId);
+    this->nodes.addNodeChild(nodeId, childFunctionId, newChildNodeId);
     return newChildNodeId;
 }
 
@@ -848,13 +850,13 @@ void CCTree<NodeData>::merge(CCTree<NodeData> &&other) {
 
 template<class NodeData>
 void CCTree<NodeData>::merge(CCTree<NodeData> &other, nodeIdType rootNodeId, nodeIdType otherRootNodeId, bool isNew) {
-    for (auto [otherChildFId, otherChildNodeId] : other.getNodeChildren(otherRootNodeId)) {
-        auto [remappedFunctionSv, remappedFunctionId] = this->functionNameToIdInsert(other.getNodeFunctionName(otherChildNodeId));
+    for (auto [otherChildFId, otherChildNodeId] : other.nodes.getNodeChildren(otherRootNodeId)) {
+        auto [remappedFunctionSv, remappedFunctionId] = this->functionNameToIdInsert(other.nodes.getNodeFunctionName(otherChildNodeId));
 
         auto [childNodeId, wasNew] = isNew ? std::pair{ this->emplaceChild(rootNodeId, remappedFunctionId, remappedFunctionSv), true } :
                                              this->tryEmplaceChild(rootNodeId, remappedFunctionId, remappedFunctionSv);
 
-        this->getNodeDataRef(childNodeId).merge(std::move(other.getNodeDataRef(otherChildNodeId)));
+        this->nodes.getNodeDataRef(childNodeId).merge(std::move(other.nodes.getNodeDataRef(otherChildNodeId)));
         this->merge(other, childNodeId, otherChildNodeId, wasNew);
     }
 }

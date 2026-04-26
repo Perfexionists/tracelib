@@ -586,7 +586,7 @@ void EventProcessor<Graph>::handleFunctionExitEvent(CCTree<NodeData> *tree, std:
         auto *backloggedEnterEvent = it->get();
         if (event->isComplementaryEvent(backloggedEnterEvent)) {
             foundTheEnterEventInBacklog = true;
-            tree->getNodeDataRef(tree->getCurrentNodeId()).combine(std::forward<std::unique_ptr<Event>>(*it), std::forward<std::unique_ptr<Event>>(event));
+            tree->nodes.getNodeDataRef(tree->getCurrentNodeId()).combine(std::forward<std::unique_ptr<Event>>(*it), std::forward<std::unique_ptr<Event>>(event));
             this->functionsBacklog.erase((it + 1).base());
             break;
         }
@@ -595,7 +595,7 @@ void EventProcessor<Graph>::handleFunctionExitEvent(CCTree<NodeData> *tree, std:
         std::cerr << "[W]: Could not find funcion entering event at function exit."
                 "Could not update the data in node!" << std::endl;
     }
-    tree->setCurrentNodeId(tree->getNodeParent(tree->getCurrentNodeId()));
+    tree->setCurrentNodeId(tree->nodes.getNodeParent(tree->getCurrentNodeId()));
     event = nullptr;
 }
 
@@ -676,19 +676,19 @@ void EventProcessor<Graph>::handleBasicBlockExitEvent(CCTree<NodeData> *tree, st
             foundTheEnterEventInBacklog = true;
             auto nodeToUpdate = tree->getCurrentNodeId();
 
-            if (tree->getNodeFunctionName(nodeToUpdate) != event->name) {
+            if (tree->nodes.getNodeFunctionName(nodeToUpdate) != event->name) {
                 // The function exited sooner than the last basic block
                 // TODO: this won't handle recursive calls
                 // needs to check also if the last event before this was function exit
                 auto [fId, wasFound] = tree->functionNameToId(event->name);
                 if (wasFound) {
-                    nodeToUpdate = tree->getNodeChild(nodeToUpdate, fId);
+                    nodeToUpdate = tree->nodes.getNodeChild(nodeToUpdate, fId);
                 }
                 // Note: If node was not found even with adjustment. It is likely that the function was not recognized at the RTN
                 // granularity and was not gathered. Thus, this basic block does not have a parent function and is skipped.
             }
             if (nodeToUpdate != NULL_NODE_ID) {
-                tree->getNodeDataRef(nodeToUpdate).combine(std::forward<std::unique_ptr<Event>>(*it), std::forward<std::unique_ptr<Event>>(event));
+                tree->nodes.getNodeDataRef(nodeToUpdate).combine(std::forward<std::unique_ptr<Event>>(*it), std::forward<std::unique_ptr<Event>>(event));
             }
             this->basicBlocksBacklog.erase((it + 1).base());
             break;
@@ -848,7 +848,7 @@ void EventProcessor<Graph>::handleStackSampleEvent(CCTree<NodeData> *tree, std::
     }
 
     this->prevStackSample = std::move(event->stackSample);
-    tree->getNodeDataRef(tree->getCurrentNodeId()).data.combine(std::forward<std::unique_ptr<Event>>(event), nullptr);
+    tree->nodes.getNodeDataRef(tree->getCurrentNodeId()).combine(std::forward<std::unique_ptr<Event>>(event), nullptr);
 }
 
 template<IsSpecializedGraphType Graph>
