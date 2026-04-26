@@ -617,7 +617,7 @@ protected:
 
     class TreeInfo {
     public:
-        std::vector<CCTNode<NodeData>*> postOrderNodes{};
+        std::vector<nodeIdType> postOrderNodes{};
         std::vector<int> leftMostDescendants{};
         std::vector<int> keyRoots{};
         long long int nodesCnt = 0;
@@ -706,9 +706,9 @@ std::pair<int, std::vector<Operation<nodeIdType>>> CCTree<NodeData>::treeEditDis
      */
 
     // Edit operations cost definitions
-    auto removeCost = [](CCTNode<NodeData>* n) { return 1; };
-    auto insertCost = [](CCTNode<NodeData>* n) { return 1; };
-    auto updateCost = [](CCTNode<NodeData>* a, CCTNode<NodeData>* b) {return a->functionId == b->functionId ? 0 : 1;};
+    auto removeCost = [](nodeIdType n) { return 1; };
+    auto insertCost = [](nodeIdType n) { return 1; };
+    auto updateCost = [this](nodeIdType a, nodeIdType b) {return this->nodes.getNodeFunctionId(a) == this->nodes.getNodeFunctionId(b) ? 0 : 1;};
 
 
     std::unique_ptr<TreeInfo> thisTreeInfo = this->getTreeInfo();
