@@ -71,8 +71,8 @@ public:
     NodeData         getNodeData(        nodeIdType id) const { return this->data[id]; }
     NodeData        &getNodeDataRef(     nodeIdType id)       { return this->data[id]; }
     nodeIdType       getNodeParent(      nodeIdType id) const { return this->parents[id]; }
-    const auto       getNodeChildren(    nodeIdType id) const { return this->children[id]; }
-    auto             getNodeChildren(    nodeIdType id)       { return this->children[id]; }
+    const auto      &getNodeChildren(    nodeIdType id) const { return this->children[id]; }
+    auto            &getNodeChildren(    nodeIdType id)       { return this->children[id]; }
     nodeIdType       getNodeChild(       nodeIdType id, functionIdType childFunctionId) const {
         auto map = this->getNodeChildren(id);
         auto it = map.find(childFunctionId);
