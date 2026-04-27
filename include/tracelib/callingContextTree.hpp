@@ -904,10 +904,11 @@ std::pair<nodeIdType, bool> CCTree<NodeData>::tryEmplaceChild(nodeIdType nodeId,
     auto &node = this->getNode(nodeId);
     auto newNodeId = this->nodes.size(); // TODO sketchy
     auto [childIt, wasNew] = node.children.try_emplace(childFunctionId, newNodeId);
+    auto nId = childIt->second;
     if (wasNew) {
         this->emplaceNode(childFunctionId, childFunctionName, nodeId);
     }
-    return { childIt->second, wasNew };
+    return { nId, wasNew };
 }
 
 template<class NodeData>
@@ -925,7 +926,7 @@ void CCTree<NodeData>::merge(CCTree<NodeData> &&other) {
 template<class NodeData>
 void CCTree<NodeData>::merge(CCTree<NodeData> &other, nodeIdType rootNodeId, nodeIdType otherRootNodeId, bool isNew) {
     for (auto [otherChildFId, otherChildNodeId] : other.getNode(otherRootNodeId).children) {
-        auto [remappedFunctionSv, remappedFunctionId] = this->functionNameToIdInsert(other.getNode(otherChildFId).functionName);
+        auto [remappedFunctionSv, remappedFunctionId] = this->functionNameToIdInsert(other.getNode(otherChildNodeId).functionName);
 
         auto [childNodeId, wasNew] = isNew ? std::pair{ this->emplaceChild(rootNodeId, remappedFunctionId, remappedFunctionSv), true } :
                                              this->tryEmplaceChild(rootNodeId, remappedFunctionId, remappedFunctionSv);
