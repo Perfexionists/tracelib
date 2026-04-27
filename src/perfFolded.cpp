@@ -66,7 +66,6 @@ std::pair<std::string_view, char> PerfFoldedParser::readUntilDelim() {
             case ';': // Fall through
             case ' ': // Fall through
             case '\n':
-                ++this->traceFileCurrent;
                 return std::pair{ std::string_view{ start, length }, current };
             default:
                 break; // Do nothing
