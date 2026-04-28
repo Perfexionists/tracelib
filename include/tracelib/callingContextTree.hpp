@@ -86,9 +86,10 @@ public:
         this->functionIds.emplace_back(fId);
         this->functionNames.emplace_back(fName);
         this->parents.emplace_back(parentId);
-
-        this->data.resize(this->functionIds.size());
-        this->children.resize(this->functionIds.size());
+        //this->data.resize(this->functionIds.size());
+        //this->children.resize(this->functionIds.size());
+        this->data.emplace_back();
+        this->children.emplace_back();
     }
 
     /**
