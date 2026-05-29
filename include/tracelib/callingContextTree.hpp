@@ -71,7 +71,7 @@ public:
     auto            &getNodeChildren(    nodeIdType id)       { return this->children[id]; }
     nodeIdType       getNodeParent(      nodeIdType id) const { return this->getNodeChildren(id).at(NULL_FUNCTION_ID); }
     nodeIdType       getNodeChild(       nodeIdType id, functionIdType childFunctionId) const {
-        auto map = this->getNodeChildren(id);
+        auto &map = this->getNodeChildren(id);
         auto it = map.find(childFunctionId);
         return (it != map.end() && it->first != NULL_FUNCTION_ID) ? it->second : NULL_NODE_ID;
     }
