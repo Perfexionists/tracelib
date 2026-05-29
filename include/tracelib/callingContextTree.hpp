@@ -27,6 +27,7 @@ using nodeIdType = uint32_t;
 const nodeIdType NULL_NODE_ID = std::numeric_limits<decltype(NULL_NODE_ID)>::max();
 const nodeIdType AUXILIARY_ROOT_NODE_ID = 0;
 const functionIdType AUXILIARY_ROOT_FUNCTION_ID = 0;
+const functionIdType NULL_FUNCTION_ID = std::numeric_limits<decltype(NULL_FUNCTION_ID)>::max();
 #define AUXILIARY_ROOT_NAME ".ROOT"
 
 template <class NodeData>
@@ -53,14 +54,10 @@ private:
     std::vector<NodeData> data;
 
     /**
-     * @brief The parent node of this node.
-     */
-    std::vector<nodeIdType> parents;
-
-    /**
      * @brief The children of this node in a map where the key is nodes function name.
      */
     using svType = boost::container::small_vector<std::pair<functionIdType, nodeIdType>, 4>;
+    // Parent is stored under key NULL_FUNCTION_ID
     std::vector<boost::container::flat_map<functionIdType, nodeIdType, std::less<functionIdType>, svType>> children;
 
 public:
@@ -70,13 +67,13 @@ public:
     std::string_view getNodeFunctionName(nodeIdType id) const { return this->functionNames[id]; }
     NodeData         getNodeData(        nodeIdType id) const { return this->data[id]; }
     NodeData        &getNodeDataRef(     nodeIdType id)       { return this->data[id]; }
-    nodeIdType       getNodeParent(      nodeIdType id) const { return this->parents[id]; }
     const auto      &getNodeChildren(    nodeIdType id) const { return this->children[id]; }
     auto            &getNodeChildren(    nodeIdType id)       { return this->children[id]; }
+    nodeIdType       getNodeParent(      nodeIdType id) const { return this->getNodeChildren(id).at(NULL_FUNCTION_ID); }
     nodeIdType       getNodeChild(       nodeIdType id, functionIdType childFunctionId) const {
         auto map = this->getNodeChildren(id);
         auto it = map.find(childFunctionId);
-        return it != map.end() ? it->second : NULL_NODE_ID;
+        return (it != map.end() && it->first != NULL_FUNCTION_ID) ? it->second : NULL_NODE_ID;
     }
     void             addNodeChild(       nodeIdType id, functionIdType childFId, nodeIdType childNId) {
         this->children[id].emplace(childFId, childNId);
@@ -85,11 +82,9 @@ public:
     void emplace_back(functionIdType fId, std::string_view fName, nodeIdType parentId) {
         this->functionIds.emplace_back(fId);
         this->functionNames.emplace_back(fName);
-        this->parents.emplace_back(parentId);
-        //this->data.resize(this->functionIds.size());
-        //this->children.resize(this->functionIds.size());
         this->data.emplace_back();
-        this->children.emplace_back();
+        //this->children.emplace_back(std::initializer_list<std::pair<functionIdType, nodeIdType>>{{NULL_FUNCTION_ID, parentId}});
+        this->children.emplace_back().emplace(NULL_FUNCTION_ID, parentId);
     }
 
     /**
@@ -107,7 +102,6 @@ public:
         this->functionIds.reserve(1000000);
         this->functionNames.reserve(1000000);
         this->data.reserve(1000000);
-        this->parents.reserve(1000000);
         this->children.reserve(1000000);
     }
     ~CCTNodes() = default;
@@ -125,7 +119,6 @@ private:
     void save(Archive & ar, const unsigned int version) const {
         ar & BOOST_SERIALIZATION_NVP(functionIds);
         ar & BOOST_SERIALIZATION_NVP(data);
-        ar & BOOST_SERIALIZATION_NVP(parents);
         ar & BOOST_SERIALIZATION_NVP(children);
     }
 
@@ -139,7 +132,6 @@ private:
     void load(Archive & ar, const unsigned int version) {
         ar & BOOST_SERIALIZATION_NVP(functionIds);
         ar & BOOST_SERIALIZATION_NVP(data);
-        ar & BOOST_SERIALIZATION_NVP(parents);
         ar & BOOST_SERIALIZATION_NVP(children);
     }
     BOOST_SERIALIZATION_SPLIT_MEMBER() // Allows to split default serialization function into save and load functions
@@ -351,8 +343,10 @@ public:
             // Push children of current node on stack
             nodeIdType nodeId = stack.top();
             stack.pop();
-            for (auto &[_, childId] : tree.getNodeChildren(nodeId)) {
-                stack.emplace(childId);
+            for (auto &[fId, childId] : tree.getNodeChildren(nodeId)) {
+                if (fId != NULL_FUNCTION_ID) {
+                    stack.emplace(childId);
+                }
             }
             // Update current node
             this->currentNode = stack.empty() ? NULL_NODE_ID : stack.top();
@@ -396,7 +390,7 @@ public:
                     visited = true;
                     for (auto it = children.rbegin(); it != children.rend(); ++it) {
                         auto childId = it->second;
-                        if (childId != NULL_NODE_ID) {
+                        if (it->first != NULL_FUNCTION_ID && childId != NULL_NODE_ID) {
                             this->stack.push({childId, false});
                         }
                     }
@@ -510,8 +504,10 @@ public:
             auto nodeId = this->queue.front();
             this->queue.pop_front();
             // Add children to the queue
-            for (auto& [_, childId] : tree.getNodeChildren(nodeId)) {
-                this->queue.push_back(childId);
+            for (auto& [fId, childId] : tree.getNodeChildren(nodeId)) {
+                if (fId != NULL_FUNCTION_ID) {
+                    this->queue.push_back(childId);
+                }
             }
             // Update the current node
             this->currentNode = this->queue.empty() ? NULL_NODE_ID : this->queue.front();
@@ -852,6 +848,9 @@ void CCTree<NodeData>::merge(CCTree<NodeData> &&other) {
 template<class NodeData>
 void CCTree<NodeData>::merge(CCTree<NodeData> &other, nodeIdType rootNodeId, nodeIdType otherRootNodeId, bool isNew) {
     for (auto [otherChildFId, otherChildNodeId] : other.nodes.getNodeChildren(otherRootNodeId)) {
+        if (otherChildFId == NULL_FUNCTION_ID) {
+            continue;
+        }
         auto [remappedFunctionSv, remappedFunctionId] = this->functionNameToIdInsert(other.nodes.getNodeFunctionName(otherChildNodeId));
 
         auto [childNodeId, wasNew] = isNew ? std::pair{ this->emplaceChild(rootNodeId, remappedFunctionId, remappedFunctionSv), true } :
