@@ -1,0 +1,79 @@
+vcs:
+  type: git
+  url: /home/drvlado/Work/RedHat/tracelib/tracelib
+
+cmds:
+  - ./build/profiling/programs/generic/generic
+
+#args:
+#  - 1
+#  - 2
+#  - 4
+#  - 8
+#  - 16
+
+workloads:
+  - 8 parBuild ./profiling/samples/big.perf-folded # FIXME Patch, because perun is ignoring the args for some reason
+
+collectors:
+  - name: time
+#  - name: trace
+#    params:
+#      strategy: userspace
+#      engine: ebpf
+#  # TODO custom perf?
+
+#postprocessors:
+#  - name: regression_analysis
+#    params:
+#      method: full
+#      steps: 10
+
+## The following contains the ordered list of postprocess phases that are executed after collection.
+## Uncomment and edit the following region (!order matters!):
+# postprocessors: TODO
+#   - name: regression_analysis
+#     params:
+#       method: full
+#   - name: filter
+## Try '$ perun postprocessby --help' to obtain list of supported collectors!
+
+# The following options automatically register newly collected profiles for current minor version
+# and make sure that profiles with identical names are not overwritten but instead extended with
+# a copy number suffix.
+profiles:
+  register_after_run: true
+  overwrite: false
+
+## Be default, we multisort the profiles by time > stem > copy in ascending order
+format:
+  sort_profiles_by: [time, stem, copy]
+  sort_profiles_order: asc
+
+# TODO ?
+#degradation:
+#  apply: all
+#  strategies:
+#    - type: mixed
+#      postprocessor: regression_analysis
+#      method: bmoe
+#    - method: aat
+
+## The following options control the degradation checks in repository
+# degradation: TODO
+## Setting the following combination of option to true will make Perun collect new profiles,
+## before checking for degradations and store them in logs at directory .perun/logs/
+#   collect_before_check: true
+#   log_collect: true
+## Setting this to first (resp. all) will apply the first (resp. all) found check methods
+## for corresponding configurations
+#   apply: first
+## Specification of list of rules for applying degradation checks
+#   strategy:
+#     - method: average_amount_threshold
+
+execute:
+  pre_run:
+    - make -C build -j
+    - sudo make -C build install
+    - sudo ldconfig
