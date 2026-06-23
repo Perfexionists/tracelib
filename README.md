@@ -42,14 +42,14 @@ library also provides Python bindings to facilitate integration into existing Py
 Installing prerequisites on Debian/Ubuntu:
 ```bash
 # library
-sudo apt install g++ make cmake libzstd-dev libboost-serialization-dev nlohmann-json3-dev 
+sudo apt install g++ make cmake libzstd-dev libboost-serialization-dev nlohmann-json3-dev
 # python bindings
 sudo apt install pybind11-dev
 ```
 
 ## Building and Installation (C++)
 
-Before building and installing decide if Python bindings are desired to be built and installed. The created module will 
+Before building and installing decide if Python bindings are desired to be built and installed. The created module will
 be installed into the ``$Python_SITEARCH`` directory. Utilizing a Python virtual environment is advised.
 
 1. Clone the repository change your directory to its root
@@ -93,10 +93,10 @@ int main() {
   auto cct = CCTree<PerfFoldedNodeData>();
   // Create the builder specifically for the data structure
   auto builder = Builder<CCTree<PerfFoldedNodeData>>();
-    
+
   // Run the building process that extracts data from parser and updates the data structure
   builder.build(&cct, &parser);
-  
+
   // Print the resulting structure
   std::cout << cct.toString() << std::endl;
 
