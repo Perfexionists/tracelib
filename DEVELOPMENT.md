@@ -9,8 +9,6 @@ PyBind11 bindings were disregarded and not tested starting development. Since th
 
 ### (medium importance, medium urgency) - Test suite
 
-### (high   importance, medium urgency) - Update documentation
-
 ## Possible optizations
 
 ### (high   potential, medium difficulty) - Remove fNameToIdMap

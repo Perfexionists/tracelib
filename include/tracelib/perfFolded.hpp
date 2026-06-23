@@ -61,6 +61,14 @@ public:
      */
     std::unordered_map<std::string, int> processNameToProcessIdMap;
 
+    /**
+     * @brief Creates a parser over the memory-mapped trace file. The start and end positions select a
+     * region of the file, which lets the file be split into chunks for parallel parsing. When startPos
+     * is not at the file start the parser skips the leftover partial line so it begins on a line boundary.
+     * @param handle handle of the memory-mapped trace file
+     * @param startPos position in the file to start parsing at
+     * @param endPos position in the file to stop parsing at
+     */
     explicit PerfFoldedParser (ParTraceHandle &handle,
                                std::ifstream::pos_type startPos = 0,
                                std::ifstream::pos_type endPos = std::ifstream::pos_type(-1));
@@ -124,6 +132,9 @@ public:
      */
     long long int getInvocationFrequency() const override;
 
+    /**
+     * @brief Merges another node's data into this one by summing their sample counts.
+     */
     void merge(PerfFoldedNodeData &&other);
 
 private:

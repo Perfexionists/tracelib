@@ -60,7 +60,8 @@ public:
     nodeIdType parent = NULL_NODE_ID;
 
     /**
-     * @brief The children of this node in a map where the key is nodes function name.
+     * @brief The children of this node in a map where the key is the child node's function id and
+     * the value is the child node's id.
      */
     using svType = boost::container::small_vector<std::pair<functionIdType, nodeIdType>, 4>;
     boost::container::flat_map<functionIdType, nodeIdType, std::less<functionIdType>, svType> children;
@@ -71,9 +72,10 @@ public:
     CCTNode() = default;
 
     /**
-     * @brief Creates a node with specified function name and optionally a parent pointer. The node
+     * @brief Creates a node with the specified function id and name, optionally with a parent. The node
      * will have no children.
-     * @param name the function name for the new node
+     * @param id the function id for the new node
+     * @param fname the function name for the new node
      * @param parent parent node of the node
      */
     explicit CCTNode(functionIdType id, std::string_view fname, nodeIdType parent = NULL_NODE_ID);
@@ -85,7 +87,8 @@ public:
 
     /**
      * @brief Adds the specified child node to the children of this node.
-     * @param child a new child node
+     * @param fId the function id of the child node
+     * @param nodeId the id of the child node
      */
     void addChild(functionIdType fId, nodeIdType nodeId);
 
@@ -206,6 +209,10 @@ private:
     std::unordered_map<std::string_view, functionIdType> functionNameToIdMap;
 
 public:
+    /**
+     * @brief Looks up the id assigned to a function name.
+     * @return the function id and whether the name was found
+     */
     std::pair<functionIdType, bool> functionNameToId(std::string_view name) const {
         auto it = functionNameToIdMap.find(name);
         if (it == functionNameToIdMap.end()) {
@@ -215,6 +222,10 @@ public:
         return {val, true};
     }
 
+    /**
+     * @brief Looks up the id for a function name, assigning a new id if the name is seen for the first time.
+     * @return the stored name (which owns the returned string_view) and its function id
+     */
     std::pair<std::string_view, functionIdType> functionNameToIdInsert(std::string_view name) {
         if (auto it = functionNameToIdMap.find(name); it != functionNameToIdMap.end()) {
             return *it;
@@ -273,23 +284,40 @@ public:
      * @param threshold the threshold value of occurrence frequency for functions in their contexts
      */
     void prune(long long int threshold);
+
+    /**
+     * @brief Computes the Zhang-Shasha tree edit distance between this tree and another one.
+     * @return the edit distance and the list of edit operations that transform this tree into the other
+     */
     std::pair<int, std::vector<Operation<CCTNode<NodeData>>>> treeEditDistance(CCTree<NodeData>& other);
 
+    /**
+     * @brief Creates a node and stores it in the tree. It is not linked to its parent's children list.
+     * @return the id of the new node
+     */
     nodeIdType emplaceNode(functionIdType fId, std::string_view fName, nodeIdType parentId);
 
     /**
-     * @brief Returns the child node with the specified function id, insert new if not found.
-     * @param childId a child node function id
-     * @return the child node with the specified function id
+     * @brief Returns the child of the given node with the specified function id, creating it if missing.
+     * @return the child node id and whether a new child was created
      */
     std::pair<nodeIdType, bool> tryEmplaceChild(nodeIdType nodeId, functionIdType childFunctionId, std::string_view childFunctionName);
 
+    /**
+     * @brief Creates a new child of the given node, without checking whether such a child already exists.
+     * @return the id of the new child node
+     */
     nodeIdType emplaceChild(nodeIdType nodeId, functionIdType childFunctionId, std::string_view childFunctionName);
 
     /**
      * @brief Merge other CCTree into the current one.
      */
     void merge(CCTree<NodeData> &&other);
+    /**
+     * @brief Recursively merges other's subtree rooted at otherRootNodeId into this tree's subtree rooted
+     * at rootNodeId, combining the data of matching nodes. isNew skips the lookup for existing children
+     * when rootNodeId was just created. This is the helper used by the public merge overload.
+     */
     void merge(CCTree<NodeData> &other, nodeIdType rootNodeId, nodeIdType otherRootNodeId, bool isNew);
 
     /**
