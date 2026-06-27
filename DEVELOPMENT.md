@@ -29,6 +29,9 @@ PyBind11 bindings were disregarded and not tested starting development. Since th
 
 ## Possible optimizations
 
+### (medium potential, medium difficulty) - Struct of arrays for storing nodes
+Instead of storing CCTree nodes as an array of structs, store them as a struct of arrays. This should have some cacheline benefits. It's being developed on branch feature/struct-of-arrays.
+
 ### (high   potential, medium difficulty) - Remove fNameToIdMap
 Function names are mapped to IDs. Avoids duplication and compares are faster (comparing ints vs strings), but at the cost of mapping the strings. Might just be faster if we don't map at all.
 
