@@ -1170,6 +1170,10 @@ void Builder<Graph>::serializeCCTreeToPerfFoldedFormat(std::ostream &outputStrea
 
 #include <thread>
 
+/**
+ * @brief Builds a CCTree from a single chunk of the trace file. Used as the per-thread worker for the
+ * parallel build, where threadIndex selects which of the threadCount equal chunks this call parses.
+ */
 static void parBuild(ParTraceHandle *handle, int threadCount, int threadIndex,
                      CCTree<PerfFoldedNodeData> *out) {
     auto parser = PerfFoldedParser(*handle,
@@ -1180,6 +1184,14 @@ static void parBuild(ParTraceHandle *handle, int threadCount, int threadIndex,
     builder.build(out, &parser);
 }
 
+/**
+ * @brief Builds a single CCTree from a Perf Folded trace file in parallel. The file is split into
+ * threadCount chunks, each parsed into its own tree on a separate thread, and the per-thread trees are
+ * then pairwise merged into one.
+ * @param traceFilePath path to the Perf Folded trace file
+ * @param threadCount number of threads (and file chunks) to use
+ * @return the merged CCTree
+ */
 CCTree<PerfFoldedNodeData> buildParCCT(const std::string &traceFilePath, int threadCount) {
     auto traceFileHandle = ParTraceHandle(traceFilePath);
 

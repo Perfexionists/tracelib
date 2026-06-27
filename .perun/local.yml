@@ -1,0 +1,29 @@
+vcs:
+  type: git
+  url: /home/drvlado/Work/RedHat/tracelib/tracelib
+
+cmds:
+  - ./build/profiling/programs/generic/generic
+
+workloads:
+  - 1 parBuild ./profiling/samples/big.perf-folded
+  - 2 parBuild ./profiling/samples/big.perf-folded
+  - 4 parBuild ./profiling/samples/big.perf-folded
+  - 8 parBuild ./profiling/samples/big.perf-folded
+
+collectors:
+  - name: time
+
+profiles:
+  register_after_run: true
+  overwrite: false
+
+format:
+  sort_profiles_by: [time, stem, copy]
+  sort_profiles_order: asc
+
+execute:
+  pre_run:
+    - make -C build -j
+    - sudo make -C build install
+    - sudo ldconfig

@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(INCLUDE_EXAMPLE_PROGRAMS "Include the example programs in building process." OFF)
+option(INCLUDE_PROFILING_PROGRAMS "Include profiling programs in the building process." OFF)
 
 # Directory structure
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -61,4 +62,8 @@ install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 if(INCLUDE_EXAMPLE_PROGRAMS)
     add_subdirectory(examples)
+endif()
+
+if(INCLUDE_PROFILING_PROGRAMS)
+    add_subdirectory(profiling/programs/generic)
 endif()

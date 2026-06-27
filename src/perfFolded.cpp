@@ -44,6 +44,8 @@ PerfFoldedParser::PerfFoldedParser(ParTraceHandle &handle,
     this->traceFileEnd = handle.getDataPtr() + handle.getFileSize();
     this->endPtr = handle.getDataPtr() + endPos;
     this->traceFileCurrent = handle.getDataPtr() + startPos;
+    // If this chunk starts in the middle of a line, skip the rest of it so we start on a line boundary.
+    // The preceding chunk is responsible for parsing that partial line.
     if (startPos != 0 && this->traceFileCurrent[-1] != '\n') {
         while (this->readUntilDelim().second != '\n') {}
     }

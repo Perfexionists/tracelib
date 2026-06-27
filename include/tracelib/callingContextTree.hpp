@@ -54,7 +54,8 @@ private:
     std::vector<NodeData> data;
 
     /**
-     * @brief The children of this node in a map where the key is nodes function name.
+     * @brief The children of this node in a map where the key is the child node's function id and
+     * the value is the child node's id.
      */
     using svType = boost::container::small_vector<std::pair<functionIdType, nodeIdType>, 4>;
     // Parent is stored under key NULL_FUNCTION_ID
@@ -156,6 +157,10 @@ private:
     std::unordered_map<std::string_view, functionIdType> functionNameToIdMap;
 
 public:
+    /**
+     * @brief Looks up the id assigned to a function name.
+     * @return the function id and whether the name was found
+     */
     std::pair<functionIdType, bool> functionNameToId(std::string_view name) const {
         auto it = functionNameToIdMap.find(name);
         if (it == functionNameToIdMap.end()) {
@@ -165,6 +170,10 @@ public:
         return {val, true};
     }
 
+    /**
+     * @brief Looks up the id for a function name, assigning a new id if the name is seen for the first time.
+     * @return the stored name (which owns the returned string_view) and its function id
+     */
     std::pair<std::string_view, functionIdType> functionNameToIdInsert(std::string_view name) {
         if (auto it = functionNameToIdMap.find(name); it != functionNameToIdMap.end()) {
             return *it;
@@ -224,21 +233,33 @@ public:
     void prune(long long int threshold);
     std::pair<int, std::vector<Operation<nodeIdType>>> treeEditDistance(CCTree<NodeData>& other);
 
+    /**
+     * @brief Creates a node and stores it in the tree. It is not linked to its parent's children list.
+     * @return the id of the new node
+     */
     nodeIdType emplaceNode(functionIdType fId, std::string_view fName, nodeIdType parentId);
 
     /**
-     * @brief Returns the child node with the specified function id, insert new if not found.
-     * @param childId a child node function id
-     * @return the child node with the specified function id
+     * @brief Returns the child of the given node with the specified function id, creating it if missing.
+     * @return the child node id and whether a new child was created
      */
     std::pair<nodeIdType, bool> tryEmplaceChild(nodeIdType nodeId, functionIdType childFunctionId, std::string_view childFunctionName);
 
+    /**
+     * @brief Creates a new child of the given node, without checking whether such a child already exists.
+     * @return the id of the new child node
+     */
     nodeIdType emplaceChild(nodeIdType nodeId, functionIdType childFunctionId, std::string_view childFunctionName);
 
     /**
      * @brief Merge other CCTree into the current one.
      */
     void merge(CCTree<NodeData> &&other);
+    /**
+     * @brief Recursively merges other's subtree rooted at otherRootNodeId into this tree's subtree rooted
+     * at rootNodeId, combining the data of matching nodes. isNew skips the lookup for existing children
+     * when rootNodeId was just created. This is the helper used by the public merge overload.
+     */
     void merge(CCTree<NodeData> &other, nodeIdType rootNodeId, nodeIdType otherRootNodeId, bool isNew);
 
     /**
