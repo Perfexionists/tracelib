@@ -20,6 +20,11 @@ Additionally, handleStackSampleEvent includes an optimization of storing the las
 
 ## Maintenance
 
+### (high   importance, high   urgency) - Fix invalid (de)serialization
+A new feature mmaps the input file and all references to the strings are just string_views (pointers). This invalidates serialization and deserialization, currently it is mostly ignored.
+
+### (high   importance, medium urgency) - Add test suite
+
 ### (high   importance, medium urgency) - Update Python bindings
 PyBind11 bindings were disregarded and not tested starting development. Since then, the API of some functions was updated and new functions were added.
 
@@ -69,9 +74,6 @@ Allow taking compressed samples (.tar.gz) as input, maybe doing it smarter than 
 
 ### (medium importance, low    urgency) - Generate flamegraph natively
 Add an option to generate flamegraph from CCTree. Currently this is done by a Perl script. Another related project: https://docs.rs/inferno/latest/inferno/
-
-### (medium importance, medium urgency) - Fix invalid (de)serialization
-A new feature mmaps the input file and all references to the strings are just string_views (pointers). This invalidates serialization and deserialization, currently it is mostly ignored.
 
 ### (medium importance, low    urgency) - Fix arbitrary reserving
 Currently CCTree reserves containers of arbitrary size, because reallocation is expensive. This is an improper solution and wastes memory. Could use chunked vector, segmented vector, hashed array tree, boost::stable_vector...
