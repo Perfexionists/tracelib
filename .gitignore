@@ -4,3 +4,4 @@ build
 cscope.out
 .cache
 profiling/samples/big
+profiling/libs
