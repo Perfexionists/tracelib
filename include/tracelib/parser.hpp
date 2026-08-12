@@ -13,10 +13,12 @@ class Parser {
 protected:
     std::string traceFilePath;
     std::ifstream traceFile;
-    std::string currentLine;
 
     std::string metadataFilePath;
     std::ifstream metadataFile;
+
+    const std::ifstream::pos_type endPos;
+    char charBeforeStart = '\n';
 
 public:
     nlohmann::json metadataJson{};
@@ -24,7 +26,9 @@ public:
     long long numberOfEvents = 0;
     long long numberOfFunctionCalls = 0;
 
-    explicit Parser(const std::string& traceFilePath, const std::string& metadataFilePath = "");
+    explicit Parser(const std::string& traceFilePath, const std::string& metadataFilePath = "",
+                    std::ifstream::pos_type startPos = 0,
+                    std::ifstream::pos_type endPos = std::ifstream::pos_type(-1));
     virtual ~Parser();
 
     // Prevent duplication of the parser
@@ -42,7 +46,7 @@ public:
      * Caller is responsible for deleting the event.
      * @return an event parsed from the trace file and enriched by the metadata
      */
-    virtual Event* getNextEvent() = 0;
+    virtual std::unique_ptr<Event> getNextEvent() = 0;
 
     /**
      * @brief Set new trace file path. The old file will be closed and newone will be used to create next events.
@@ -67,13 +71,6 @@ public:
      * @return file path to current metadata file
      */
     std::string getMetadataFile();
-
-    /**
-     * @brief Retrieve original line from trace file as a string that is corresponding to the last event created.
-     * If getNextEvent was not called for the current trace file it is set to empty string.
-     * @return original line from trace file as a string corresponding to the last event created
-     */
-    std::string getCurrentOriginalLine();
 };
 
 #endif // PARSER_HPP

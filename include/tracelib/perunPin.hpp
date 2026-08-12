@@ -189,7 +189,7 @@ public:
      * @return PerunPinEvent instance with data corresponding to an event from Perun's Pin tracer format.
      * Caller is responsible for deleting the event.
      */
-    PerunPinEvent* getNextEvent() override;
+    std::unique_ptr<Event> getNextEvent() override;
 
     friend void from_json(const nlohmann::json& j, Location& location);
     friend void from_json(const nlohmann::json& j, FunctionMetadata& functionMetadata);
@@ -200,7 +200,7 @@ public:
 /**
  * @brief Implementation of the NodeData class. Used to store data within the CCT/CCG structures.
  */
-class PerunPinNodeData final : public NodeData {
+class PerunPinNodeData final : public NodeDataBase {
 public:
     /**
      * @brief Durations of events calculated from their timestamps.
@@ -243,7 +243,7 @@ public:
      * @param enterEvent enter event associated with the node this data is stored in
      * @param exitEvent exit event associated with the node this data is stored in
      */
-    void combine(Event* enterEvent, Event* exitEvent) override;
+    void combine(std::unique_ptr<Event> &&enterEvent, std::unique_ptr<Event> &&exitEvent) override;
 
     /**
      * @brief Retrieve a duration metric for the node this data is stored in.

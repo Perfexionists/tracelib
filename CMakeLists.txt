@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.22)
 project(tracelib VERSION 1.0 LANGUAGES CXX DESCRIPTION "Library for representation and manipulation of performance traces")
 include(GNUInstallDirs)
 
@@ -7,22 +7,27 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-option(INCLUDE_PYTHON_BINDINGS "Include the python bindings in building and installation process." OFF)
 option(INCLUDE_EXAMPLE_PROGRAMS "Include the example programs in building process." OFF)
+option(INCLUDE_PROFILING_PROGRAMS "Include profiling programs in the building process." OFF)
 
 # Directory structure
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Find required packages
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(zstd REQUIRED libzstd)
+include_directories(${ZSTD_INCLUDE_DIR})
+
 find_package(Boost REQUIRED NO_MODULE COMPONENTS serialization)
-find_package(zstd REQUIRED)
+#find_package(zstd REQUIRED)
 find_package(nlohmann_json REQUIRED)
 
 
 # Add library target
 add_library(${PROJECT_NAME} SHARED)
-target_compile_options(${PROJECT_NAME} PRIVATE -g -Wno-unused-parameter -flto=auto)
+target_compile_definitions(${PROJECT_NAME} PRIVATE NDEBUG)
+target_compile_options(${PROJECT_NAME} PRIVATE -Wno-unused-parameter -flto=auto -g -Wall -Wextra -O3 -fno-omit-frame-pointer -fno-optimize-sibling-calls)
 target_sources(${PROJECT_NAME} PRIVATE
     ${SRC_DIR}/event.cpp
     ${SRC_DIR}/parser.cpp
@@ -38,11 +43,13 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 set_target_properties(${PROJECT_NAME} PROPERTIES
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION_MAJOR}
+        INTERPROCEDURAL_OPTIMIZATION TRUE
 )
 target_link_libraries(${PROJECT_NAME} PRIVATE
         Boost::serialization
         nlohmann_json::nlohmann_json
         zstd
+        ${ZSTD_LIBRARY}
 )
 
 install(TARGETS ${PROJECT_NAME} # EXPORT tracelibConfig
@@ -53,10 +60,10 @@ install(TARGETS ${PROJECT_NAME} # EXPORT tracelibConfig
 )
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-if(INCLUDE_PYTHON_BINDINGS)
-    add_subdirectory(python-bindings)
-endif()
-
 if(INCLUDE_EXAMPLE_PROGRAMS)
     add_subdirectory(examples)
+endif()
+
+if(INCLUDE_PROFILING_PROGRAMS)
+    add_subdirectory(profiling/programs/generic)
 endif()

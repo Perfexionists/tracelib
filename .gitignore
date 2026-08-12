@@ -1,3 +1,7 @@
 .idea
 cmake-build-debug
 build
+cscope.out
+.cache
+profiling/samples/big
+profiling/libs

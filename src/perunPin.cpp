@@ -45,15 +45,13 @@ void PerunPinParser::parseMetadata() {
     }
 }
 
-PerunPinEvent* PerunPinParser::getNextEvent() {
+std::unique_ptr<Event> PerunPinParser::getNextEvent() {
 
     // Retrieve a line from the file
     std::string currentLine;
     if (!std::getline(this->traceFile, currentLine)) {
-        this->currentLine = "";
         return nullptr;
     }
-    this->currentLine = currentLine;
     if (currentLine.empty() or currentLine.find_first_not_of(" \t\n\v\f\r") == std::string::npos) {
         return this->getNextEvent();
     }
@@ -92,7 +90,7 @@ PerunPinEvent* PerunPinParser::getNextEvent() {
 
 
     Event::Type eventType;
-    std::string functionName;
+    std::string functionName; // TODO stringview?
     std::string sourceCodeFilePath;
     std::vector<int> sourceCodeLines;
     auto* data = new PerunPinEventData(timestamp);
@@ -160,7 +158,7 @@ PerunPinEvent* PerunPinParser::getNextEvent() {
         exit(1);
     }
 
-    auto* event = new PerunPinEvent(eventType, functionName, "", tid, pid, -1, data);
+    auto event = std::make_unique<PerunPinEvent>(eventType, functionName, "", tid, pid, -1, data);
     event->id = id;
     return event;
 }
@@ -205,9 +203,9 @@ void from_json(const nlohmann::json &j, PerunPinParser::Metadata &metadata) {
 }
 
 // NodeData
-void PerunPinNodeData::combine(Event *enterEvent, Event *exitEvent) {
-    auto* pinEnterEvent = static_cast<PerunPinEvent*>(enterEvent);
-    auto* pinExitEvent = static_cast<PerunPinEvent*>(exitEvent);
+void PerunPinNodeData::combine(std::unique_ptr<Event> &&enterEvent, std::unique_ptr<Event> &&exitEvent) {
+    auto* pinEnterEvent = static_cast<PerunPinEvent*>(enterEvent.get());
+    auto* pinExitEvent = static_cast<PerunPinEvent*>(exitEvent.get());
     const auto* enterData = pinEnterEvent->getData();
     const auto* exitData = pinExitEvent->getData();
 

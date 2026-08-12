@@ -3,9 +3,10 @@
 
 #include "tracelib/parser.hpp"
 
-Parser::Parser(const std::string& traceFilePath, const std::string& metadataFilePath) {
+Parser::Parser(const std::string& traceFilePath, const std::string& metadataFilePath,
+               std::ifstream::pos_type startPos, std::ifstream::pos_type endPos)
+               : endPos(endPos) {
     this->traceFilePath = traceFilePath;
-    this->currentLine = "";
 
     this->metadataFilePath = metadataFilePath;
     if (!this->metadataFilePath.empty()) {
@@ -15,9 +16,16 @@ Parser::Parser(const std::string& traceFilePath, const std::string& metadataFile
         }
     }
 
-    this->traceFile.open(this->traceFilePath);
-    if (!this->traceFile.is_open()) {
-        std::cerr << "[E]: Couldn't open file " << this->traceFilePath << "!" << std::endl;
+    if (!this->traceFilePath.empty()) {
+        this->traceFile.open(this->traceFilePath);
+        if (!this->traceFile.is_open()) {
+            std::cerr << "[E]: Couldn't open file " << this->traceFilePath << "!" << std::endl;
+        } else {
+            if (std::ifstream::pos_type(0) != startPos) {
+                this->traceFile.seekg(startPos - std::ifstream::pos_type(1));
+                this->traceFile.get(this->charBeforeStart);
+            }
+        }
     }
 }
 
@@ -44,7 +52,6 @@ void Parser::parseMetadata() {
 void Parser::setTraceFile(const std::string& filePath) {
     this->traceFile.close();
     this->traceFilePath = filePath;
-    this->currentLine = "";
 
     this->traceFile.open(this->traceFilePath);
     if (!this->traceFile.is_open()) {
@@ -70,8 +77,4 @@ void Parser::setMetadataFile(const std::string& filePath) {
 
 std::string Parser::getMetadataFile() {
     return this->metadataFilePath;
-}
-
-std::string Parser::getCurrentOriginalLine() {
-    return this->currentLine;
 }

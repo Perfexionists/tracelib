@@ -3,9 +3,11 @@
 
 #include <boost/serialization/nvp.hpp>
 
+#include <memory>
 #include "nodeData.hpp"
 #include "parser.hpp"
 #include "event.hpp"
+#include "utils.hpp"
 
 // Event
 /**
@@ -26,12 +28,12 @@ public:
  */
 class PerfFoldedEvent final : public Event {
 public:
-    PerfFoldedEventData* data;
+    std::unique_ptr<PerfFoldedEventData> data;
 
     PerfFoldedEvent(Type type, const std::string& name,
                     const std::string& processName = "",
                     int tid = -1, int pid = -1, int ppid = -1,
-                    PerfFoldedEventData* data = nullptr);
+                    std::unique_ptr<PerfFoldedEventData> &&data = nullptr);
 
     ~PerfFoldedEvent() override;
 
@@ -55,16 +57,23 @@ public:
 class PerfFoldedParser final : public Parser {
 public:
     /**
-     * @brief Helper counter that creates cusom PIDs for the processes in the Perf Folded format since those are not
-     * explicitly specified in the format and are required by the builder of CCT/CCG structures.
-     */
-    int processIdCounter = 1;
-    /**
      * @brief Helper map to associate the created PID with the provided process name from the Perf Folded format
      */
     std::unordered_map<std::string, int> processNameToProcessIdMap;
 
-    explicit PerfFoldedParser (const std::string &traceFilePath, const std::string &metadataFilePath = "");
+    /**
+     * @brief Creates a parser over the memory-mapped trace file. The start and end positions select a
+     * region of the file, which lets the file be split into chunks for parallel parsing. When startPos
+     * is not at the file start the parser skips the leftover partial line so it begins on a line boundary.
+     * @param handle handle of the memory-mapped trace file
+     * @param startPos position in the file to start parsing at
+     * @param endPos position in the file to stop parsing at
+     */
+    explicit PerfFoldedParser (ParTraceHandle &handle,
+                               std::ifstream::pos_type startPos = 0,
+                               std::ifstream::pos_type endPos = std::ifstream::pos_type(-1));
+    PerfFoldedParser (const PerfFoldedParser &) = delete;
+    ~PerfFoldedParser() override;
 
     /**
      * @brief Parse metadata into json object. The perf folded format does not expect any metadata.
@@ -77,14 +86,26 @@ public:
      * @return PerfFoldedEvent instance with data corresponding to an event from Perf Folded Event.
      * Caller is responsible for deleting the event.
      */
-    PerfFoldedEvent* getNextEvent() override;
+    std::unique_ptr<Event> getNextEvent() override;
+
+private:
+    /*
+     * @brief Read the input file until either of the characters from the string "; \n" or EOF are found.
+     * @return A pair of the string_view, excluding the delimiter found (valid until the next call after this function returns the \n delim),
+     * and the delimiter character found. On error, the delim is 0.
+     */
+    std::pair<std::string_view, char> readUntilDelim();
+
+    char *traceFileCurrent = nullptr;
+    char *traceFileEnd = nullptr;
+    char *endPtr = nullptr;
 };
 
 // CCT node
 /**
  * @brief Implementation of the NodeData class. Used to store data within the CCT/CCG structures.
  */
-class PerfFoldedNodeData final : public NodeData {
+class PerfFoldedNodeData final : public NodeDataBase {
 public:
     long long int samplesCnt = 0;
 
@@ -98,7 +119,7 @@ public:
      * @param enterEvent enter event associated with the node this data is stored in
      * @param exitEvent exit event associated with the node this data is stored in
      */
-    void combine(Event* enterEvent, Event* exitEvent = nullptr) override;
+    void combine(std::unique_ptr<Event> &&enterEvent, std::unique_ptr<Event> &&exitEvent = nullptr) override;
 
     /**
      * @brief Retrieve a duration metric for the node this data is stored in. Here it is the invocation count.
@@ -110,6 +131,11 @@ public:
      * @return invocation frequency of the node
      */
     long long int getInvocationFrequency() const override;
+
+    /**
+     * @brief Merges another node's data into this one by summing their sample counts.
+     */
+    void merge(PerfFoldedNodeData &&other);
 
 private:
     friend class boost::serialization::access;

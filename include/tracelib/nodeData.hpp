@@ -1,15 +1,16 @@
 #ifndef NODEDATA_HPP
 #define NODEDATA_HPP
 
+#include <memory>
 #include "event.hpp"
 
 /**
  * @brief Base class for data stored in nodes of Calling Context Tree and Connected Call Graph.
  */
-class NodeData {
+class NodeDataBase {
 public:
-    NodeData() = default;
-    virtual ~NodeData() = default;
+    NodeDataBase() = default;
+    virtual ~NodeDataBase() = default;
 
     /**
      * @brief Combines data from enter end exit events and stores them in the derivedl class from this class. The
@@ -17,7 +18,7 @@ public:
      * @param enterEvent enter event associated with the node this data is stored in
      * @param exitEvent exit event associated with the node this data is stored in
      */
-    virtual void combine(Event* enterEvent, Event* exitEvent = nullptr) = 0;
+    virtual void combine(std::unique_ptr<Event> &&enterEvent, std::unique_ptr<Event> &&exitEvent = nullptr) = 0;
 
     /**
      * @brief Retrieve a duration metric for the node this data is stored in. Usually time spent in the function.
